@@ -11,7 +11,7 @@
 - **表格转换**：Excel 与 CSV / JSON / HTML 互转
 - **PDF 工具**：合并、拆页、转图片、图片合成 PDF、提取文字
 - **压缩包工具**：解压 ZIP / TAR / GZ / TGZ，打包为 ZIP / GZ
-- **格式侦探**：识别文件真实格式（防改名伪装）123
+- **格式侦探**：识别文件真实格式（防改名伪装）
 - **网页音频**：从网页 URL 提取音频直链并下载
 
 ## 技术栈
@@ -30,7 +30,4 @@
   --hidden-import webview.platforms.edgechromium --collect-all webview `
   --collect-all pythonnet --collect-all clr_loader main.py
 ```
-
-## 许可
-
-仅供学习交流使用。
+有问题可以说，谢谢
