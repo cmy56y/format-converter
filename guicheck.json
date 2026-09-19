@@ -1,0 +1,4 @@
+{
+  "ok": true,
+  "detail": "{\"title\":\"格式转换器 · 全格式转换中心\",\"nav\":9,\"drop\":8,\"dd\":14,\"ddEmpty\":0,\"selHidden\":14,\"engine\":true,\"xlsx\":true,\"pdflib\":true,\"pdfjs\":true,\"fflate\":true,\"mammoth\":true,\"pyapi\":true,\"htmlLen\":80321,\"filesDebug\":{\"filesChild\":0,\"filesH\":0,\"filesDisp\":\"none\",\"filesHTML\":\"\",\"resultsClass\":\"results\",\"resultsDisp\":\"none\",\"resultsChild\":2}}"
+}

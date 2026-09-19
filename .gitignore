@@ -1,0 +1,31 @@
+# 虚拟环境
+.venv/
+venv/
+
+# 构建产物
+build/
+dist/
+*.spec
+
+# Python 缓存
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# 测试文件
+test_files/
+
+# 临时诊断脚本
+diag*.py
+gen_test_files.py
+fix_*.py
+inject_debug.py
+
+# IDE
+.vscode/
+.idea/
+
+# 系统
+Thumbs.db
+Desktop.ini

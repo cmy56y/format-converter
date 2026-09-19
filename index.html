@@ -1,0 +1,1785 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>格式转换器 · 全格式转换中心</title>
+<script src="vendor/ffmpeg.js" integrity="sha384-HJcOheArWWImG8iIDY0pbuK4nyRXZYGkzfaCq+ghw2CcjBlDShKWGpC9sTL42Lcu" crossorigin="anonymous"></script>
+<script src="vendor/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous"></script>
+<script src="vendor/pdf-lib.min.js" integrity="sha384-weMABwrltA6jWR8DDe9Jp5blk+tZQh7ugpCsF3JwSA53WZM9/14PjS5LAJNHNjAI" crossorigin="anonymous"></script>
+<script src="vendor/pdf.min.js" integrity="sha384-/1qUCSGwTur9vjf/z9lmu/eCUYbpOTgSjmpbMQZ1/CtX2v/WcAIKqRv+U1DUCG6e" crossorigin="anonymous"></script>
+<script src="vendor/fflate.js" integrity="sha384-DT0Ls0mO7JmjTnT+oBuMhEJzYJO1zUqzuuMXNdnOmOQRIpN2BgSjvBV/j50NngIT" crossorigin="anonymous"></script>
+<script src="vendor/mammoth.browser.min.js" integrity="sha384-/cXAMbzovUIKbBERjPmR3SnPTh8siWr5lsvFYj1Uq4XP0yaJUZJmsh0YXyGv5P0y" crossorigin="anonymous"></script>
+<style>
+/* ============ 设计令牌 ============ */
+:root{
+  --bg:#F4F6F9; --bg-deep:#EAEFF5; --panel:#FFFFFF; --panel-2:#F2F5F9; --panel-3:#E7ECF2;
+  --line:#E2E7EE; --line-2:#C7D0DC;
+  --txt:#1E2632; --txt-2:#5B6678; --txt-3:#8B95A6;
+  --amber:#E8A33D; --amber-hi:#D9912B; --amber-dim:rgba(232,163,61,.12);
+  --green:#2E9E73; --red:#D05A48; --cyan:#3A9FB2; --blue:#3A86D6; --violet:#6A5BE0;
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Consolas,"Courier New",monospace;
+  --sans:"Segoe UI","PingFang SC","Microsoft YaHei","Noto Sans SC",-apple-system,sans-serif;
+  --radius:12px; --radius-sm:8px;
+  --shadow:0 10px 30px rgba(30,45,70,.08);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:var(--sans); background:var(--bg); color:var(--txt);
+  font-size:14px; line-height:1.6;
+  background-image:
+    radial-gradient(1100px 500px at 85% -10%, rgba(232,163,61,.10), transparent 60%),
+    radial-gradient(900px 420px at -10% 110%, rgba(79,184,201,.08), transparent 60%);
+  background-attachment:fixed;
+}
+::selection{background:rgba(232,163,61,.3)}
+a{color:var(--amber-hi)}
+button{font-family:inherit}
+input,select,textarea{font-family:inherit;color:var(--txt)}
+:focus-visible{outline:2px solid var(--amber);outline-offset:2px;border-radius:4px}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:#2a3448;border-radius:6px;border:2px solid var(--bg)}
+::-webkit-scrollbar-track{background:transparent}
+
+/* ============ 布局骨架 ============ */
+.app{display:flex;min-height:100vh}
+.side{
+  width:236px;flex:0 0 236px;background:var(--bg-deep);border-right:1px solid var(--line);
+  display:flex;flex-direction:column;position:sticky;top:0;height:100vh;z-index:20;
+}
+.brand{display:flex;align-items:center;gap:10px;padding:20px 18px 16px;border-bottom:1px solid var(--line)}
+.brand .logo{width:38px;height:38px;flex:0 0 38px}
+.brand h1{font-size:16px;font-weight:900;letter-spacing:.4px}
+.brand .sub{font-size:10px;color:var(--txt-3);letter-spacing:2px;font-weight:500}
+.nav{flex:1;overflow-y:auto;padding:12px 10px}
+.nav-btn{
+  display:flex;align-items:center;gap:11px;width:100%;padding:11px 13px;margin-bottom:4px;
+  background:none;border:1px solid transparent;border-radius:var(--radius-sm);color:var(--txt-2);
+  font-size:13.5px;font-weight:500;cursor:pointer;text-align:left;transition:background .15s,color .15s;
+}
+.nav-btn svg{width:19px;height:19px;flex:0 0 19px;color:var(--txt-3);transition:color .15s}
+.nav-btn:hover{background:var(--panel);color:var(--txt)}
+.nav-btn:hover svg{color:var(--txt-2)}
+.nav-btn.active{background:var(--amber-dim);border-color:rgba(232,163,61,.35);color:var(--amber-hi)}
+.nav-btn.active svg{color:var(--amber-hi)}
+.nav-btn .tag{margin-left:auto;font-size:10px;color:var(--txt-3);font-weight:400}
+.side-foot{padding:14px 16px;border-top:1px solid var(--line);font-size:11px;color:var(--txt-3)}
+.engine-state{display:flex;align-items:center;gap:7px;margin-bottom:6px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--txt-3);flex:0 0 8px}
+.dot.on{background:var(--green);box-shadow:0 0 8px var(--green)}
+.dot.busy{background:var(--amber);box-shadow:0 0 8px var(--amber);animation:pulse 1s infinite}
+.dot.off{background:var(--red)}
+@keyframes pulse{50%{opacity:.35}}
+
+.main{flex:1;min-width:0;padding:26px 30px 60px;max-width:1180px;align-self:flex-start}
+.module-head{margin-bottom:18px}
+.module-head h2{font-size:22px;font-weight:900;letter-spacing:.3px}
+.module-head p{color:var(--txt-2);font-size:13px;margin-top:4px;max-width:640px}
+
+/* ============ 拖放区 ============ */
+.dropzone{
+  border:1.6px dashed var(--line-2);border-radius:var(--radius);padding:34px 20px;text-align:center;
+  background:linear-gradient(180deg,var(--panel),var(--bg-deep));
+  transition:border-color .18s,background .18s;cursor:pointer;position:relative;
+}
+.dropzone:hover,.dropzone.drag{border-color:var(--amber);background:linear-gradient(180deg,rgba(232,163,61,.07),var(--bg-deep))}
+.dropzone .dz-icon{width:44px;height:44px;margin:0 auto 10px;color:var(--amber);opacity:.9}
+.dropzone .dz-title{font-size:15px;font-weight:700}
+.dropzone .dz-sub{font-size:12px;color:var(--txt-3);margin-top:4px}
+.dropzone .dz-cta{
+  display:inline-block;margin-top:14px;padding:7px 18px;border-radius:20px;font-size:12.5px;font-weight:700;
+  background:var(--amber);color:#1a1205;cursor:pointer;transition:transform .12s;
+}
+.dropzone .dz-cta:hover{transform:translateY(-1px);background:var(--amber-hi)}
+
+/* ============ 选项面板 ============ */
+.options{
+  display:flex;flex-wrap:wrap;gap:12px;margin-top:16px;padding:16px;
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+}
+.opt{display:flex;flex-direction:column;gap:6px}
+.opt label{font-size:11.5px;color:var(--txt-2);font-weight:600;letter-spacing:.5px}
+.opt select,.opt input{
+  background:var(--bg-deep);border:1px solid var(--line-2);border-radius:var(--radius-sm);
+  padding:8px 10px;font-size:13px;min-width:130px;color:var(--txt);cursor:pointer;
+}
+.opt select:hover,.opt input:hover{border-color:var(--amber)}
+.opt input[type=number]{min-width:96px}
+.opt .hint{font-size:11px;color:var(--txt-3);margin-top:-2px}
+
+/* ============ 自绘下拉（替代原生 select，规避 WebView2 渲染异常） ============ */
+.dd{position:relative;min-width:130px}
+.dd-btn{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;
+  background:var(--bg-deep);border:1px solid var(--line-2);border-radius:var(--radius-sm);
+  padding:8px 10px;font-size:13px;color:var(--txt);cursor:pointer;text-align:left;
+  transition:border-color .12s;
+}
+.dd-btn:hover{border-color:var(--amber)}
+.dd.open .dd-btn{border-color:var(--amber)}
+.dd-btn .dd-label{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dd-chev{width:0;height:0;border-left:4.5px solid transparent;border-right:4.5px solid transparent;border-top:5px solid var(--txt-3);flex:0 0 auto;transition:transform .15s}
+.dd.open .dd-chev{transform:rotate(180deg);border-top-color:var(--amber)}
+.dd-menu{
+  position:absolute;top:calc(100% + 5px);left:0;right:0;z-index:80;
+  background:var(--panel-2);border:1px solid var(--line-2);border-radius:var(--radius-sm);
+  box-shadow:var(--shadow);padding:4px;display:none;max-height:264px;overflow:auto;
+}
+.dd-menu.open{display:block;animation:rise .16s ease}
+.dd-opt{
+  display:block;width:100%;text-align:left;background:none;border:none;color:var(--txt-2);
+  padding:8px 10px;font-size:12.5px;border-radius:6px;cursor:pointer;
+}
+.dd-opt:hover{background:var(--panel-3);color:var(--amber-hi)}
+.dd-opt.sel{color:var(--amber-hi);font-weight:700}
+.dd-opt.sel::before{content:"✓ ";font-weight:900}
+.actions{display:flex;gap:10px;margin-top:16px;align-items:center;flex-wrap:wrap}
+.btn{
+  padding:10px 22px;border-radius:var(--radius-sm);border:1px solid transparent;font-size:14px;font-weight:700;
+  cursor:pointer;transition:filter .12s,transform .12s,background .15s;display:inline-flex;align-items:center;gap:8px;
+}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none!important}
+.btn-primary{background:var(--amber);color:#1a1205}
+.btn-primary:hover:not(:disabled){background:var(--amber-hi)}
+.btn-ghost{background:var(--panel-2);border-color:var(--line-2);color:var(--txt)}
+.btn-ghost:hover:not(:disabled){border-color:var(--amber);color:var(--amber-hi)}
+.btn svg{width:16px;height:16px}
+.btn-wrap{display:flex;gap:8px;flex-wrap:wrap}
+.btn-sm{padding:7px 16px;font-size:12.5px}
+
+/* ============ 网页音频模块 ============ */
+.web-box{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px;margin-top:18px}
+.web-row{display:flex;gap:10px;flex-wrap:wrap}
+.web-url{
+  flex:1;min-width:280px;background:#FFFFFF;border:1px solid var(--line-2);border-radius:var(--radius-sm);
+  padding:11px 14px;color:var(--txt);font-size:13.5px;outline:none;transition:border-color .15s;
+}
+.web-url:focus{border-color:var(--amber)}
+.web-hint{font-size:12px;color:var(--txt-3);line-height:1.7;margin-top:12px;background:rgba(232,163,61,.06);border-left:3px solid rgba(232,163,61,.5);padding:9px 13px;border-radius:4px}
+.web-result{margin-top:16px}
+.web-loading{color:var(--txt-3);font-size:13px;padding:14px 0;display:flex;align-items:center;gap:9px}
+.web-loading::before{content:"";width:13px;height:13px;border-radius:50%;border:2px solid var(--line-2);border-top-color:var(--amber);animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.web-title{font-size:13.5px;font-weight:700;color:var(--txt-2);margin:4px 0 10px}
+.web-item{display:flex;align-items:center;gap:12px;padding:11px 14px;background:var(--panel-2);border:1px solid var(--line);border-radius:var(--radius-sm);margin-bottom:8px}
+.web-item-info{flex:1;min-width:0}
+.web-item-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.web-item-sub{font-size:11.5px;color:var(--txt-3);margin-top:2px}
+
+/* ============ 文件卡片 ============ */
+.files{display:flex;flex-direction:column;gap:10px;margin-top:18px}.files:empty{display:none}
+.file-card{
+  display:flex;align-items:center;gap:13px;padding:13px 16px;background:var(--panel);
+  border:1px solid var(--line);border-radius:var(--radius);animation:rise .25s ease;
+}
+@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.file-badge{
+  width:42px;height:42px;border-radius:10px;flex:0 0 42px;display:flex;align-items:center;justify-content:center;
+  font-size:10px;font-weight:900;letter-spacing:.3px;color:#0c1017;
+}
+.file-badge.ext{text-transform:uppercase}
+.file-meta{flex:1;min-width:0}
+.file-name{font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.file-sub{font-size:11.5px;color:var(--txt-3);margin-top:2px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.file-sub .real{color:var(--txt-2)}
+.file-sub .warn{color:var(--amber-hi)}
+.file-sub .err{color:var(--red)}
+.file-progress{flex:0 0 150px;height:8px;border-radius:5px;background:var(--bg-deep);overflow:hidden;position:relative}
+.file-progress .bar{
+  height:100%;border-radius:5px;background:linear-gradient(90deg,var(--amber),var(--amber-hi));
+  width:0;transition:width .25s;position:relative;overflow:hidden;
+}
+.file-progress .bar::after{
+  content:"";position:absolute;inset:0;background:repeating-linear-gradient(45deg,rgba(255,255,255,.22) 0 6px,transparent 6px 12px);
+  background-size:17px 17px;animation:belt .6s linear infinite;
+}
+@keyframes belt{to{background-position:17px 0}}
+.file-progress .pct{position:absolute;right:0;top:-15px;font-size:10px;color:var(--txt-2);font-family:var(--mono)}
+.file-progress.done .bar{background:var(--green)}
+.file-progress.done .bar::after{display:none}
+.file-progress.err .bar{background:var(--red)}
+.file-progress.err .bar::after{display:none}
+.file-status{font-size:11px;color:var(--txt-2);width:72px;text-align:right;flex:0 0 72px}
+.file-status.done{color:var(--green)}
+.file-status.err{color:var(--red)}
+.file-x{
+  width:28px;height:28px;border-radius:50%;border:1px solid transparent;background:none;color:var(--txt-3);
+  cursor:pointer;font-size:15px;line-height:1;flex:0 0 28px;transition:all .12s;
+}
+.file-x:hover{color:var(--red);border-color:var(--red);background:rgba(224,108,91,.08)}
+.file-dl{color:var(--amber-hi);cursor:pointer;text-decoration:none;font-size:11.5px;font-weight:600}
+button.file-dl{background:none;border:none;padding:0;font-family:inherit}
+
+/* ============ 结果区 ============ */
+.results{margin-top:22px;display:none}
+.results.show{display:block}
+.results-head{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.results-head h3{font-size:15px;font-weight:700}
+.results-list{display:flex;flex-direction:column;gap:8px}
+.result-item{
+  display:flex;align-items:center;gap:12px;padding:11px 15px;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--radius-sm);
+}
+.result-item .r-name{flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.result-item .r-size{font-size:11.5px;color:var(--txt-3);font-family:var(--mono)}
+.result-item .r-act{display:flex;gap:6px}
+
+/* ============ 识别结果（格式侦探） ============ */
+.detect-cards{display:flex;flex-direction:column;gap:12px;margin-top:16px}
+.detect-card{border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px;background:var(--panel)}
+.detect-top{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.detect-badge{font-size:11px;font-weight:900;padding:5px 12px;border-radius:6px;letter-spacing:.5px}
+.detect-name{font-size:15px;font-weight:700}
+.detect-app{font-size:11.5px;color:var(--txt-2);padding:3px 9px;background:var(--bg-deep);border-radius:20px}
+.detect-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;margin-top:13px}
+.detect-grid .kv{background:var(--bg-deep);border-radius:var(--radius-sm);padding:9px 12px}
+.detect-grid .k{font-size:10.5px;color:var(--txt-3);letter-spacing:.5px}
+.detect-grid .v{font-size:12.5px;margin-top:2px;word-break:break-all}
+.detect-note{margin-top:12px;font-size:12.5px;color:var(--txt-2);background:rgba(232,163,61,.07);border-left:3px solid var(--amber);padding:10px 13px;border-radius:0 var(--radius-sm) var(--radius-sm) 0}
+.detect-note.lock{border-color:var(--red);background:rgba(224,108,91,.08);color:var(--txt)}
+.detect-note.ok{border-color:var(--green);background:rgba(63,191,143,.07)}
+.detect-actions{display:flex;gap:8px;margin-top:13px;flex-wrap:wrap}
+
+/* ============ 日志 ============ */
+.logpanel{
+  margin-top:14px;background:#0A0D13;border:1px solid var(--line);border-radius:var(--radius-sm);
+  font-family:var(--mono);font-size:11px;color:#7f8aa0;max-height:170px;overflow:auto;padding:10px 13px;display:none;
+  white-space:pre-wrap;word-break:break-all;
+}
+.logpanel.show{display:block}
+.logpanel .tail{color:#3fbf8f}
+
+/* ============ 引擎加载横幅 ============ */
+.engine-banner{
+  display:none;align-items:center;gap:13px;margin-bottom:16px;padding:13px 17px;border-radius:var(--radius);
+  background:linear-gradient(90deg,rgba(232,163,61,.12),rgba(232,163,61,.03));border:1px solid rgba(232,163,61,.4);
+  font-size:13px;
+}
+.engine-banner.show{display:flex}
+.engine-banner .spinner{
+  width:18px;height:18px;border-radius:50%;border:2.5px solid rgba(232,163,61,.25);border-top-color:var(--amber);
+  animation:spin .8s linear infinite;flex:0 0 18px;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ============ Toast ============ */
+.toasts{position:fixed;right:20px;bottom:20px;display:flex;flex-direction:column;gap:9px;z-index:100;max-width:340px}
+.toast{
+  padding:12px 16px;border-radius:var(--radius-sm);background:var(--panel-2);border:1px solid var(--line-2);
+  box-shadow:var(--shadow);font-size:13px;animation:rise .25s ease;
+}
+.toast.ok{border-color:rgba(63,191,143,.5)}
+.toast.err{border-color:rgba(224,108,91,.55)}
+.toast.info{border-color:rgba(79,184,201,.45)}
+.toast .t-title{font-weight:700;margin-bottom:2px}
+.toast .t-msg{color:var(--txt-2);font-size:12px}
+
+/* ============ 打印模板 ============ */
+.print-sheet{display:none}
+@media print{
+  body>*:not(.print-sheet){display:none!important}
+  .print-sheet{display:block!important;padding:28pt;font-size:11pt;color:#111;line-height:1.75;font-family:var(--sans)}
+  .print-sheet h1{font-size:17pt;margin-bottom:10pt;border-bottom:1.2pt solid #444;padding-bottom:6pt}
+  .print-sheet h2{font-size:14pt;margin:12pt 0 5pt}
+  .print-sheet h3{font-size:12.5pt;margin:10pt 0 4pt}
+  .print-sheet pre,.print-sheet code{font-family:var(--mono);background:#f1f2f4;border-radius:3pt;font-size:9.5pt}
+  .print-sheet pre{padding:8pt;overflow-wrap:break-word;white-space:pre-wrap}
+  .print-sheet blockquote{border-left:3pt solid #999;margin:6pt 0;padding-left:9pt;color:#444}
+  .print-sheet table{border-collapse:collapse;margin:8pt 0;width:100%}
+  .print-sheet td,.print-sheet th{border:.6pt solid #999;padding:4pt 6pt;font-size:9.5pt}
+  .print-sheet img{max-width:100%}
+  .print-sheet .pg{page-break-before:always}
+}
+
+/* ============ 响应式 ============ */
+@media (max-width:860px){
+  .app{flex-direction:column}
+  .side{width:100%;height:auto;position:static;border-right:none;border-bottom:1px solid var(--line)}
+  .brand{padding:12px 16px}
+  .brand .logo{width:30px;height:30px;flex-basis:30px}
+  .nav{display:flex;gap:4px;padding:8px 10px;overflow-x:auto;flex-wrap:nowrap}
+  .nav-btn{flex:0 0 auto;width:auto;padding:9px 12px;font-size:12.5px}
+  .nav-btn .tag{display:none}
+  .nav-btn span.lbl{display:none}
+  .nav-btn svg{width:17px;height:17px}
+  .side-foot{display:none}
+  .main{padding:18px 14px 50px}
+  .file-progress{flex-basis:90px}
+  .file-status{width:auto;flex-basis:auto}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ===== 侧栏导航 ===== -->
+  <aside class="side">
+    <div class="brand">
+      <svg class="logo" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+        <rect x="3" y="3" width="42" height="42" rx="11" fill="#ffffff"/>
+        <path d="M18 15v18l13-9-13-9z" fill="#14100a"/>
+        <path d="M34.5 22.5a3 3 0 100-6 3 3 0 000 6zM32 34h8" stroke="#14100a" stroke-width="2.4" stroke-linecap="round"/>
+        
+      </svg>
+      <div>
+        <h1>格式转换器</h1>
+        <div class="sub">FORMAT CONVERTER</div>
+      </div>
+    </div>
+    <nav class="nav" id="nav" aria-label="功能分类">
+      <button class="nav-btn active" data-route="audio">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+        <span class="lbl">音频转换</span><span class="tag">Audio</span>
+      </button>
+      <button class="nav-btn" data-route="video">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="14" height="14" rx="2.5"/><path d="M22 8.5v7l-6-3.5 6-3.5z"/></svg>
+        <span class="lbl">视频转换</span><span class="tag">Video</span>
+      </button>
+      <button class="nav-btn" data-route="image">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-4.5-4.5L7 20"/></svg>
+        <span class="lbl">图片转换</span><span class="tag">Image</span>
+      </button>
+      <button class="nav-btn" data-route="doc">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h4"/></svg>
+        <span class="lbl">文档转换</span><span class="tag">Doc</span>
+      </button>
+      <button class="nav-btn" data-route="sheet">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9.5h18M3 14.5h18M9.5 4v16M14.5 4v16"/></svg>
+        <span class="lbl">表格转换</span><span class="tag">Sheet</span>
+      </button>
+      <button class="nav-btn" data-route="pdf">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z"/><path d="M14 2v6h6"/><path d="M9 15l2 2 4-4"/></svg>
+        <span class="lbl">PDF 工具</span><span class="tag">PDF</span>
+      </button>
+      <button class="nav-btn" data-route="archive">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 8h18M8 4v4h8V4"/><path d="M10 13h4"/></svg>
+        <span class="lbl">压缩包工具</span><span class="tag">ZIP</span>
+      </button>
+      <button class="nav-btn" data-route="detect">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/><path d="M11 8v6M8 11h6"/></svg>
+        <span class="lbl">格式侦探</span><span class="tag">Detect</span>
+      </button>
+      <button class="nav-btn" data-route="web">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 4 5.7 4 9s-1.5 6.4-4 9c-2.5-2.6-4-5.7-4-9s1.5-6.4 4-9z"/><path d="M12 3a15 15 0 010 18M12 3a15 15 0 000 18"/></svg>
+        <span class="lbl">网页音频</span><span class="tag">Web</span>
+      </button>
+    </nav>
+    <div class="side-foot">
+      <div class="engine-state"><span class="dot" id="engDot"></span><span id="engText">转码引擎未加载</span></div>
+      <div>全部转换在本地浏览器完成，文件不上传服务器。</div>
+    </div>
+  </aside>
+
+  <!-- ===== 主工作区 ===== -->
+  <main class="main" id="main">
+    <div class="engine-banner" id="engineBanner">
+      <span class="spinner"></span>
+      <span id="engineBannerText">正在加载转码引擎（约 30MB，首次较慢，之后走缓存）…</span>
+    </div>
+
+    <!-- 音频 -->
+    <section class="module" data-module="audio">
+      <div class="module-head"><h2>音频转换</h2><p>MP3、WAV、OGG、M4A、AAC、FLAC、Opus 等常见音频格式互转，支持批量处理。</p></div>
+      <div class="dropzone" data-drop="audio">
+        <svg class="dz-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+        <div class="dz-title">把音频文件拖到这里</div>
+        <div class="dz-sub">支持 mp3 / wav / ogg / m4a / aac / flac / opus / wma / amr，可多选</div>
+        <div class="dz-cta">选择音频文件</div>
+      </div>
+      <div class="options">
+        <div class="opt"><label for="a-target">目标格式</label><select id="a-target"></select></div>
+        <div class="opt"><label for="a-quality">音质</label><select id="a-quality">
+          <option value="0">高质量（默认）</option><option value="1">标准</option><option value="2">经济（更小体积）</option>
+        </select></div>
+        <div class="opt"><div class="hint" style="align-self:flex-end;padding-bottom:8px">无损格式（WAV/FLAC）转换时音质选项不生效</div></div>
+      </div>
+      <div class="actions"><button class="btn btn-primary" data-convert="audio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h14M13 6l6 6-6 6"/></svg>开始转换</button><button class="btn btn-ghost" data-clear>清空列表</button></div>
+      <div class="files" data-files="audio"></div>
+      <div class="results" data-results="audio">
+        <div class="results-head"><h3>转换结果</h3><button class="btn btn-ghost" style="padding:5px 14px;font-size:12px" data-dlall="audio">全部下载</button></div>
+        <div class="results-list" data-results-list="audio"></div>
+      </div>
+    </section>
+
+    <!-- 视频 -->
+    <section class="module" data-module="video" hidden>
+      <div class="module-head"><h2>视频转换</h2><p>MP4、WebM、MOV、AVI、MKV 等视频格式互转，支持调整分辨率与质量，可将视频转为 GIF。</p></div>
+      <div class="dropzone" data-drop="video">
+        <svg class="dz-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="14" height="14" rx="2.5"/><path d="M22 8.5v7l-6-3.5 6-3.5z"/></svg>
+        <div class="dz-title">把视频文件拖到这里</div>
+        <div class="dz-sub">支持 mp4 / webm / mov / avi / mkv / m4v / mpeg / 3gp / flv，可多选</div>
+        <div class="dz-cta">选择视频文件</div>
+      </div>
+      <div class="options">
+        <div class="opt"><label for="v-target">目标格式</label><select id="v-target"></select></div>
+        <div class="opt"><label for="v-res">分辨率</label><select id="v-res">
+          <option value="orig">保持原样</option><option value="1920:1080">1080p</option><option value="1280:720">720p</option><option value="854:480">480p</option><option value="640:360">360p</option>
+        </select></div>
+        <div class="opt"><label for="v-quality">画质</label><select id="v-quality">
+          <option value="23">高质量（CRF 23）</option><option value="28">标准（CRF 28）</option><option value="32">经济（CRF 32）</option>
+        </select></div>
+        <div class="opt"><label for="v-fps">帧率</label><select id="v-fps">
+          <option value="orig">保持原样</option><option value="30">30 fps</option><option value="24">24 fps</option><option value="15">15 fps</option>
+        </select></div>
+        <div class="opt"><div class="hint" style="align-self:flex-end;padding-bottom:8px">转为 GIF 时使用「分辨率 + 帧率」控制输出大小</div></div>
+      </div>
+      <div class="actions"><button class="btn btn-primary" data-convert="video"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h14M13 6l6 6-6 6"/></svg>开始转换</button><button class="btn btn-ghost" data-clear>清空列表</button></div>
+      <div class="files" data-files="video"></div>
+      <div class="results" data-results="video">
+        <div class="results-head"><h3>转换结果</h3><button class="btn btn-ghost" style="padding:5px 14px;font-size:12px" data-dlall="video">全部下载</button></div>
+        <div class="results-list" data-results-list="video"></div>
+      </div>
+    </section>
+
+    <!-- 图片 -->
+    <section class="module" data-module="image" hidden>
+      <div class="module-head"><h2>图片转换</h2><p>PNG、JPG、WebP 互转与压缩，支持批量处理，无需转码引擎、秒级完成。</p></div>
+      <div class="dropzone" data-drop="image">
+        <svg class="dz-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-4.5-4.5L7 20"/></svg>
+        <div class="dz-title">把图片拖到这里</div>
+        <div class="dz-sub">支持 png / jpg / jpeg / webp / gif / bmp / svg / avif，可多选批量转换</div>
+        <div class="dz-cta">选择图片</div>
+      </div>
+      <div class="options">
+        <div class="opt"><label for="i-target">目标格式</label><select id="i-target">
+          <option value="png">PNG（无损）</option><option value="jpeg">JPG（有损）</option><option value="webp">WebP（现代压缩）</option>
+        </select></div>
+        <div class="opt"><label for="i-quality">图片质量</label><select id="i-quality">
+          <option value="0.9">90%（高质量）</option><option value="0.75" selected>75%（默认）</option><option value="0.5">50%（较小体积）</option><option value="0.3">30%（最小体积）</option>
+        </select><div class="hint">仅 JPG / WebP 生效</div></div>
+      </div>
+      <div class="actions"><button class="btn btn-primary" data-convert="image"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h14M13 6l6 6-6 6"/></svg>开始转换</button><button class="btn btn-ghost" data-clear>清空列表</button></div>
+      <div class="files" data-files="image"></div>
+      <div class="results" data-results="image">
+        <div class="results-head"><h3>转换结果</h3><button class="btn btn-ghost" style="padding:5px 14px;font-size:12px" data-dlall="image">全部下载</button></div>
+        <div class="results-list" data-results-list="image"></div>
+      </div>
+    </section>
+
+    <!-- 文档 -->
+    <section class="module" data-module="doc" hidden>
+      <div class="module-head"><h2>文档转换</h2><p>Word 提取文本、文本编码修复（GBK→UTF-8）、Markdown / 纯文本转 PDF（经浏览器打印，中文完美）。</p></div>
+      <div class="dropzone" data-drop="doc">
+        <svg class="dz-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h4"/></svg>
+        <div class="dz-title">把文档拖到这里</div>
+        <div class="dz-sub">支持 docx / txt / md / html / rtf（RTF 按纯文本读取）</div>
+        <div class="dz-cta">选择文档</div>
+      </div>
+      <div class="options">
+        <div class="opt"><label for="d-target">目标格式</label><select id="d-target"></select></div>
+        <div class="opt"><div class="hint" style="align-self:flex-end;padding-bottom:8px">转 PDF 时将打开打印窗口，选择「另存为 PDF」即可</div></div>
+      </div>
+      <div class="actions"><button class="btn btn-primary" data-convert="doc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h14M13 6l6 6-6 6"/></svg>开始转换</button><button class="btn btn-ghost" data-clear>清空列表</button></div>
+      <div class="files" data-files="doc"></div>
+      <div class="results" data-results="doc">
+        <div class="results-head"><h3>转换结果</h3><button class="btn btn-ghost" style="padding:5px 14px;font-size:12px" data-dlall="doc">全部下载</button></div>
+        <div class="results-list" data-results-list="doc"></div>
+      </div>
+    </section>
+
+    <!-- 表格 -->
+    <section class="module" data-module="sheet" hidden>
+      <div class="module-head"><h2>表格转换</h2><p>Excel 与 CSV / JSON / HTML 表格互转。导出的 CSV 默认带 UTF-8 BOM，Excel 直接打开不乱码。</p></div>
+      <div class="dropzone" data-drop="sheet">
+        <svg class="dz-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9.5h18M3 14.5h18M9.5 4v16M14.5 4v16"/></svg>
+        <div class="dz-title">把表格文件拖到这里</div>
+        <div class="dz-sub">支持 xlsx / xls / csv / tsv / json（数组/对象数组）</div>
+        <div class="dz-cta">选择表格</div>
+      </div>
+      <div class="options">
+        <div class="opt"><label for="s-target">目标格式</label><select id="s-target"></select></div>
+        <div class="opt"><div class="hint" style="align-self:flex-end;padding-bottom:8px">多工作表 Excel 默认转换第一个工作表</div></div>
+      </div>
+      <div class="actions"><button class="btn btn-primary" data-convert="sheet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h14M13 6l6 6-6 6"/></svg>开始转换</button><button class="btn btn-ghost" data-clear>清空列表</button></div>
+      <div class="files" data-files="sheet"></div>
+      <div class="results" data-results="sheet">
+        <div class="results-head"><h3>转换结果</h3><button class="btn btn-ghost" style="padding:5px 14px;font-size:12px" data-dlall="sheet">全部下载</button></div>
+        <div class="results-list" data-results-list="sheet"></div>
+      </div>
+    </section>
+
+    <!-- PDF -->
+    <section class="module" data-module="pdf" hidden>
+      <div class="module-head"><h2>PDF 工具</h2><p>合并多个 PDF、按页拆出、PDF 转图片、图片合成 PDF、提取文字。全部在本地完成。</p></div>
+      <div class="dropzone" data-drop="pdf">
+        <svg class="dz-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z"/><path d="M14 2v6h6"/><path d="M9 15l2 2 4-4"/></svg>
+        <div class="dz-title">把 PDF 或图片拖到这里</div>
+        <div class="dz-sub">合并 / 拆页 / 转图片 / 图片合成 PDF / 提取文字，可多选</div>
+        <div class="dz-cta">选择文件</div>
+      </div>
+      <div class="options">
+        <div class="opt"><label for="p-action">操作</label><select id="p-action">
+          <option value="merge">合并多个 PDF（按列表顺序）</option>
+          <option value="extract">拆出指定页（提取页面范围）</option>
+          <option value="toimg">PDF 转图片</option>
+          <option value="imgtopdf">图片合成 PDF</option>
+          <option value="totext">提取 PDF 文字</option>
+        </select></div>
+        <div class="opt"><label for="p-pages">页面范围</label><input type="text" id="p-pages" placeholder="如 1-3,5,8-10（仅拆页用）"></div>
+        <div class="opt"><label for="p-imgfmt">图片格式</label><select id="p-imgfmt"><option value="png">PNG</option><option value="jpeg">JPG</option></select></div>
+        <div class="opt"><label for="p-dpi">清晰度</label><select id="p-dpi"><option value="1">普通</option><option value="2">高清</option><option value="3">超清</option></select></div>
+      </div>
+      <div class="actions"><button class="btn btn-primary" data-convert="pdf"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h14M13 6l6 6-6 6"/></svg>开始处理</button><button class="btn btn-ghost" data-clear>清空列表</button></div>
+      <div class="files" data-files="pdf"></div>
+      <div class="results" data-results="pdf">
+        <div class="results-head"><h3>处理结果</h3><button class="btn btn-ghost" style="padding:5px 14px;font-size:12px" data-dlall="pdf">全部下载</button></div>
+        <div class="results-list" data-results-list="pdf"></div>
+      </div>
+    </section>
+
+    <!-- 压缩 -->
+    <section class="module" data-module="archive" hidden>
+      <div class="module-head"><h2>压缩包工具</h2><p>解压 ZIP / TAR / GZ / TGZ，查看压缩包内容并批量导出；也可把多个文件打包为 ZIP 或 GZ。</p></div>
+      <div class="dropzone" data-drop="archive">
+        <svg class="dz-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 8h18M8 4v4h8V4"/><path d="M10 13h4"/></svg>
+        <div class="dz-title">把压缩包或文件拖到这里</div>
+        <div class="dz-sub">支持 zip / tar / gz / tgz 解压，或选择多个文件打包</div>
+        <div class="dz-cta">选择文件</div>
+      </div>
+      <div class="options">
+        <div class="opt"><label for="z-action">操作</label><select id="z-action">
+          <option value="extract">解压压缩包并导出全部内容</option>
+          <option value="zip">打包为 ZIP</option>
+          <option value="gzip">单个文件 GZIP 压缩</option>
+          <option value="gunzip">GZIP 解压</option>
+        </select></div>
+      </div>
+      <div class="actions"><button class="btn btn-primary" data-convert="archive"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h14M13 6l6 6-6 6"/></svg>开始处理</button><button class="btn btn-ghost" data-clear>清空列表</button></div>
+      <div class="files" data-files="archive"></div>
+      <div class="results" data-results="archive">
+        <div class="results-head"><h3>处理结果</h3><button class="btn btn-ghost" style="padding:5px 14px;font-size:12px" data-dlall="archive">全部下载</button></div>
+        <div class="results-list" data-results-list="archive"></div>
+      </div>
+    </section>
+
+    <!-- 格式侦探 -->
+    <section class="module" data-module="detect" hidden>
+      <div class="module-head"><h2>格式侦探</h2><p>读取文件头部的真实格式信息，识别被改名的文件、判断专有/加密格式（如爱奇艺 QSV、腾讯 QLV、优酷 KUX、微信 SILK 语音等）。</p></div>
+      <div class="dropzone" data-drop="detect">
+        <svg class="dz-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/><path d="M11 8v6M8 11h6"/></svg>
+        <div class="dz-title">把任意文件拖到这里进行识别</div>
+        <div class="dz-sub">支持任何文件类型，识别真实格式、真实编码器与文件大小</div>
+        <div class="dz-cta">选择文件</div>
+      </div>
+      <div class="detect-cards" data-detect-cards></div>
+      <div class="results" data-results="detect">
+        <div class="results-head"><h3>输出</h3><button class="btn btn-ghost" style="padding:5px 14px;font-size:12px" data-dlall="detect">全部下载</button></div>
+        <div class="results-list" data-results-list="detect"></div>
+      </div>
+    </section>
+    <section class="module" data-module="web" hidden>
+      <div class="module-head"><h2>网页音频提取</h2><p>输入网页地址、播客 RSS 或音频直链，解析并下载其中的音频（mp3 / m4a / ogg / flac / wav…）。此功能需要联网。</p></div>
+      <div class="web-box">
+        <div class="web-row">
+          <input class="web-url" id="webUrl" type="text" placeholder="粘贴网页地址或音频直链，例如 https://example.com/listen 或 https://xxx/song.mp3" spellcheck="false" autocomplete="off">
+          <button class="btn btn-primary" id="webExtractBtn">提取音频</button>
+        </div>
+        <div class="web-hint">提示：网易云 / QQ 音乐等需要登录或动态加密的站点无法直接解析，可在浏览器按 F12 → 网络 → 媒体 找到 mp3 直链后粘贴到这里下载；纯音频直链也可直接粘贴下载。</div>
+        <div class="web-result" id="webResult"></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<input type="file" id="fileInput" multiple hidden>
+
+<div class="toasts" id="toasts"></div>
+<div class="print-sheet" id="printSheet"></div>
+
+<script>
+'use strict';
+/* ================================================================
+   核心：状态 / 工具 / 格式识别 / 转码引擎 / 通用 UI
+   ================================================================ */
+const $ = (s, r=document) => r.querySelector(s);
+const $$ = (s, r=document) => [...r.querySelectorAll(s)];
+
+/* 运行环境判定：exe（pywebview 本地服务） / 网页（http 服务器或 file 双击） */
+const IS_EXE = !!(window.pywebview && window.pywebview.api);
+const IS_FILE = location.protocol === 'file:';
+const CDN_BASE = 'https://cdn.jsdelivr.net/npm/';
+const FFMPEG_CORE_JS = (IS_FILE ? CDN_BASE + '@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js' : 'vendor/ffmpeg-core.js');
+const FFMPEG_CORE_WASM = (IS_FILE ? CDN_BASE + '@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm' : 'vendor/ffmpeg-core.wasm');
+const PDFJS_WORKER_SRC = (IS_FILE ? CDN_BASE + 'pdfjs-dist@3.11.174/build/pdf.worker.min.js' : 'vendor/pdf.worker.min.js');
+
+const state = {
+  route: 'audio',
+  files: {},            // route -> [fileItem]
+  results: {},          // route -> [resultItem]
+  busy: false,
+  engine: 'idle',       // idle | loading | ready | error
+  engineProgress: 0,
+};
+
+function uid(){ return 'f' + Math.random().toString(36).slice(2, 10); }
+function fmtSize(n){
+  if (n == null) return '—';
+  if (n < 1024) return n + ' B';
+  if (n < 1048576) return (n/1024).toFixed(1) + ' KB';
+  if (n < 1073741824) return (n/1048576).toFixed(1) + ' MB';
+  return (n/1073741824).toFixed(2) + ' GB';
+}
+function extOf(name){ const m = /\.([a-zA-Z0-9]+)$/.exec(name || ''); return m ? m[1].toLowerCase() : ''; }
+function baseOf(name){ return (name || '').replace(/\.[^.]+$/, ''); }
+function stripTags(html){ const d = document.createElement('div'); d.innerHTML = html; return d.textContent || ''; }
+
+/* ---------- Toast ---------- */
+function toast(title, msg, kind='info', ms=4200){
+  const box = document.createElement('div');
+  box.className = 'toast ' + kind;
+  box.innerHTML = '<div class="t-title"></div><div class="t-msg"></div>';
+  box.querySelector('.t-title').textContent = title;
+  box.querySelector('.t-msg').textContent = msg || '';
+  $('#toasts').appendChild(box);
+  setTimeout(() => { box.style.opacity = '0'; box.style.transition = 'opacity .4s'; setTimeout(() => box.remove(), 420); }, ms);
+}
+
+/* ---------- 通用下载 / 保存 ---------- */
+function downloadBlob(blob, name){
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+}
+async function saveBlob(blob, name){
+  if (IS_EXE){
+    try {
+      const path = await window.pywebview.api.pick_save_path(name);
+      if (!path) return false;
+      const resp = await fetch('/api/save?path=' + encodeURIComponent(path), { method: 'POST', body: blob });
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      return true;
+    } catch(e){
+      toast('自动保存失败', '已改用浏览器下载方式，请留意下载栏。', 'info', 4000);
+      downloadBlob(blob, name);
+      return true;
+    }
+  }
+  downloadBlob(blob, name);
+  return true;
+}
+async function downloadBytes(bytes, name, mime='application/octet-stream'){
+  return saveBlob(new Blob([bytes], {type: mime}), name);
+}
+async function downloadText(text, name, mime='text/plain;charset=utf-8'){
+  return saveBlob(new Blob(['\ufeff' + text], {type: mime}), name);
+}
+async function saveMany(list){
+  /* list: [{blob, name}]；exe 模式先选文件夹，网页模式逐个浏览器下载 */
+  if (!list.length) return;
+  if (IS_EXE){
+    try {
+      const folder = await window.pywebview.api.pick_folder();
+      if (!folder) return;
+      for (const it of list){
+        const path = folder.replace(/[\\/]+$/, '') + '\\' + it.name;
+        const resp = await fetch('/api/save?path=' + encodeURIComponent(path), { method: 'POST', body: it.blob });
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      }
+      toast('保存完成', `已保存 ${list.length} 个文件到所选文件夹。`, 'ok');
+      return;
+    } catch(e){
+      toast('自动保存失败', '已改用浏览器逐个下载。', 'info', 4000);
+    }
+  }
+  list.forEach(it => downloadBlob(it.blob, it.name));
+}
+
+/* ================================================================
+   格式识别：魔数探测 + 专有格式数据库
+   ================================================================ */
+const MAGIC_DB = [
+  { test: b => b.length>=3 && b[0]===0xFF && b[1]===0xD8 && b[2]===0xFF, name:'JPEG 图片', ext:'jpg', cat:'图片' },
+  { test: b => b.length>=8 && b[0]===0x89 && b[1]===0x50 && b[2]===0x4E && b[3]===0x47, name:'PNG 图片', ext:'png', cat:'图片' },
+  { test: b => b.length>=6 && b.slice(0,6).every((v,i)=>v===[0x47,0x49,0x46,0x38,0x37,0x61][i]), name:'GIF 图片', ext:'gif', cat:'图片' },
+  { test: b => b.length>=12 && b[0]===0x52 && b[1]===0x49 && b[2]===0x46 && b[3]===0x46 && b[8]===0x57 && b[9]===0x45 && b[10]===0x42 && b[11]===0x50, name:'WebP 图片', ext:'webp', cat:'图片' },
+  { test: b => b.length>=12 && ascii(b,4,8)==='ftyp' && /^(avif|avis)$/.test(ascii(b,8,12)), name:'AVIF 图片', ext:'avif', cat:'图片' },
+  { test: b => b.length>=12 && ascii(b,4,8)==='ftyp' && /^(heic|heix|hevc|mif1|msf1)$/.test(ascii(b,8,12)), name:'HEIC 图片', ext:'heic', cat:'图片' },
+  { test: b => b.length>=12 && ascii(b,4,8)==='ftyp', name:'MP4 / M4A / MOV 媒体', ext:'mp4', cat:'媒体', detect: 'ftyp-' + ascii(b,8,12) },
+  { test: b => b.length>=4 && b[0]===0x1A && b[1]===0x45 && b[2]===0xDF && b[3]===0xA3, name:'Matroska 媒体（MKV / WebM）', ext:'mkv', cat:'媒体' },
+  { test: b => b.length>=3 && b[0]===0x49 && b[1]===0x44 && b[2]===0x33, name:'MP3 音频（ID3）', ext:'mp3', cat:'音频' },
+  { test: b => b.length>=2 && ((b[0]===0xFF && (b[1]&0xE0)===0xE0) || (b[0]===0xFF && (b[1]&0xF6)===0xF2)), name:'MP3 音频（帧头）', ext:'mp3', cat:'音频' },
+  { test: b => b.length>=12 && ascii(b,0,4)==='RIFF' && ascii(b,8,12)==='WAVE', name:'WAV 音频', ext:'wav', cat:'音频' },
+  { test: b => b.length>=4 && ascii(b,0,4)==='OggS', name:'OGG 音频/视频', ext:'ogg', cat:'音频' },
+  { test: b => b.length>=4 && b[0]===0x66 && b[1]===0x4C && b[2]===0x61 && b[3]===0x43, name:'FLAC 音频', ext:'flac', cat:'音频' },
+  { test: b => b.length>=2 && b[0]===0xFF && (b[1]&0xF6)===0xF0, name:'AAC 音频（ADTS）', ext:'aac', cat:'音频' },
+  { test: b => b.length>=4 && ascii(b,0,4)==='Opus', name:'Opus 音频', ext:'opus', cat:'音频' },
+  { test: b => b.length>=4 && ascii(b,0,4)==='fLaC', name:'FLAC 音频', ext:'flac', cat:'音频' },
+  { test: b => b.length>=4 && ascii(b,0,4)==='%PDF', name:'PDF 文档', ext:'pdf', cat:'文档' },
+  { test: b => b.length>=4 && b[0]===0x50 && b[1]===0x4B && (b[2]===0x03 || b[2]===0x05 || b[2]===0x07), name:'ZIP 压缩包 / Office 文档', ext:'zip', cat:'压缩' },
+  { test: b => b.length>=7 && b[0]===0x52 && b[1]===0x61 && b[2]===0x72 && b[3]===0x21 && b[4]===0x1A && b[5]===0x07, name:'RAR 压缩包', ext:'rar', cat:'压缩' },
+  { test: b => b.length>=6 && b[0]===0x37 && b[1]===0x7A && b[2]===0xBC && b[3]===0xAF && b[4]===0x27 && b[5]===0x1C, name:'7-Zip 压缩包', ext:'7z', cat:'压缩' },
+  { test: b => b.length>=3 && b[0]===0x1F && b[1]===0x8B && b[2]===0x08, name:'GZIP 压缩', ext:'gz', cat:'压缩' },
+  { test: b => b.length>=8 && ascii(b,257,261)==='ustar', name:'TAR 归档', ext:'tar', cat:'压缩' },
+  { test: b => b.length>=8 && ascii(b,0,5)==='<?xml', name:'XML 文件', ext:'xml', cat:'文本' },
+  { test: b => b.length>=6 && /<html/i.test(ascii(b,0,200)), name:'HTML 文件', ext:'html', cat:'文档' },
+  { test: b => b.length>=6 && ascii(b,0,6)==='{\rtf1', name:'RTF 文档', ext:'rtf', cat:'文档' },
+  { test: b => b.length>=6 && b[0]===0x23 && b[1]===0x21 && b[2]===0x53 && b[3]===0x49 && b[4]===0x4C && b[5]===0x4B, name:'SILK 语音（微信/QQ 音频）', ext:'silk', cat:'专有', prop:'silk' },
+  { test: b => b.length>=8 && b[0]===0x00 && b[1]===0x00 && b[2]===0x00 && b[3]===0x14 && b[4]===0x66 && b[5]===0x74 && b[6]===0x79 && b[7]===0x70, name:'M4A 音频', ext:'m4a', cat:'音频' },
+];
+function ascii(b, s, e){
+  let out = '';
+  for (let i = s; i < e && i < b.length; i++){ const c = b[i]; out += (c >= 32 && c < 127) ? String.fromCharCode(c) : '\uFFFD'; }
+  return out;
+}
+function detectMagic(bytes){
+  for (const rule of MAGIC_DB){
+    try { if (rule.test(bytes)) return rule; } catch(e){}
+  }
+  return null;
+}
+
+/* 专有格式说明（合规边界：仅识别与说明，不提供解密） */
+const PROPRIETARY = {
+  qsv:  { app:'爱奇艺', name:'QSV 加密缓存视频', lock:true,
+          note:'爱奇艺客户端缓存的加密视频，受数字版权保护（DRM）。格式转换器无法也不支持解密此类文件。建议在爱奇艺客户端内播放，或通过官方途径导出/购买内容。' },
+  qy:   { app:'爱奇艺', name:'QY 加密缓存视频', lock:true,
+          note:'爱奇艺新版客户端的加密缓存视频，受数字版权保护（DRM），无法在本工具中转换。建议在爱奇艺客户端内播放。' },
+  qlv:  { app:'腾讯视频', name:'QLV 加密缓存视频', lock:true,
+          note:'腾讯视频客户端缓存的加密视频，受数字版权保护（DRM），无法在本工具中转换。建议在腾讯视频客户端内播放或使用官方导出功能。' },
+  kux:  { app:'优酷', name:'KUX 加密缓存视频', lock:true,
+          note:'优酷客户端缓存的加密视频，受数字版权保护（DRM），无法在本工具中转换。建议在优酷客户端内播放。' },
+  tdl:  { app:'芒果TV', name:'TDL 加密缓存视频', lock:true,
+          note:'芒果TV客户端缓存的加密视频，受数字版权保护（DRM），无法在本工具中转换。建议在芒果TV客户端内播放。' },
+  tdlp: { app:'芒果TV', name:'TDLP 加密缓存视频', lock:true, note:'芒果TV加密缓存文件，受 DRM 保护，无法转换。' },
+  bili: { app:'哔哩哔哩', name:'BILI 缓存视频', lock:false,
+          note:'哔哩哔哩客户端缓存文件。若魔数检测显示为标准 MP4 视频，说明它只是被改了扩展名——点击「去视频模块转换」即可正常处理；若检测不出有效媒体头，则为加密内容，无法转换。' },
+  silk: { app:'微信 / QQ', name:'SILK 语音消息', lock:false,
+          note:'微信语音消息的原始编码。可先用专用 SILK 转码工具转为 WAV/MP3 后，再拖入本工具继续处理。' },
+  dat:  { app:'QQ', name:'QQ 图片缓存', lock:false,
+          note:'QQ 客户端缓存的图片（多为简单混淆的 JPG/GIF）。最稳妥的做法是在 QQ 聊天窗口中重新保存原图。' },
+  download: { app:'浏览器', name:'未完成下载文件', lock:false,
+          note:'这是浏览器下载未完成时产生的临时文件，无法转换。请删除后重新下载完整文件。' },
+  crdownload: { app:'Chrome', name:'未完成下载文件', lock:false, note:'下载中断产生的临时文件，无法转换。请重新下载。' },
+  part: { app:'下载工具', name:'未完成下载分片', lock:false, note:'下载未完成的临时分片，无法转换。请重新下载完整文件。' },
+  tmp:  { app:'系统', name:'临时文件', lock:false, note:'无法识别的临时文件，通常没有完整的文件内容，无法转换。' },
+};
+function proprietaryInfo(ext){
+  return PROPRIETARY[ext] || null;
+}
+
+/* ================================================================
+   转码引擎：ffmpeg.wasm（懒加载，单线程版）
+   ================================================================ */
+let _ffmpeg = null, _ffmpegLogs = [];
+
+function engineDot(){
+  const d = $('#engDot'), t = $('#engText');
+  d.className = 'dot';
+  if (state.engine === 'ready'){ d.classList.add('on'); t.textContent = '转码引擎已就绪'; }
+  else if (state.engine === 'loading'){ d.classList.add('busy'); t.textContent = '转码引擎加载中…'; }
+  else if (state.engine === 'error'){ d.classList.add('off'); t.textContent = '转码引擎加载失败（可重试）'; }
+  else { t.textContent = '转码引擎未加载（首次转换时自动加载）'; }
+}
+async function ensureEngine(force){
+  if (_ffmpeg) return _ffmpeg;
+  if (state.engine === 'loading' && !force) throw new Error('引擎正在加载，请稍候');
+  state.engine = 'loading'; state.engineProgress = 0; engineDot();
+  const banner = $('#engineBanner'); banner.classList.add('show');
+  const txt = $('#engineBannerText');
+  const timer = setInterval(() => {
+    if (state.engineProgress < 92) state.engineProgress += Math.random() * 6;
+    txt.textContent = '正在加载转码引擎（约 30MB，首次较慢，之后走缓存）… ' + Math.min(99, Math.round(state.engineProgress)) + '%';
+  }, 300);
+  try {
+    if (!window.FFmpegWASM || !window.FFmpegWASM.FFmpeg) throw new Error('ffmpeg 脚本未加载，请检查网络后刷新页面');
+    const { FFmpeg } = window.FFmpegWASM;
+    const inst = new FFmpeg();
+    inst.on('log', ({ message }) => {
+      _ffmpegLogs.push(message);
+      if (_ffmpegLogs.length > 400) _ffmpegLogs.splice(0, _ffmpegLogs.length - 400);
+    });
+    await inst.load({ coreURL: FFMPEG_CORE_JS, wasmURL: FFMPEG_CORE_WASM });
+    _ffmpeg = inst;
+    state.engine = 'ready';
+    toast('转码引擎就绪', '音频与视频转换现在可以开始了。', 'ok', 2600);
+  } catch (err) {
+    state.engine = 'error';
+    toast('转码引擎加载失败', '请检查网络连接后点击「重试加载引擎」。', 'err', 6000);
+    throw err;
+  } finally {
+    clearInterval(timer);
+    banner.classList.remove('show');
+    engineDot();
+  }
+}
+function engineRetry(){ state.engine = 'idle'; _ffmpeg = null; return ensureEngine(true); }
+
+/* ffmpeg 单任务执行：写输入 → exec → 读输出 → 清理。args 中的 IN/OUT 会被替换为实际文件名 */
+async function ffmpegRun(file, args, outName, onProgress, onLog){
+  const f = await ensureEngine();
+  const inName = 'in_' + uid() + '.' + (extOf(file.name) || 'bin');
+  args = args.map(a => a === 'IN' ? inName : a === 'OUT' ? outName : a);
+  const data = new Uint8Array(await file.arrayBuffer());
+  _ffmpegLogs = [];
+  await f.writeFile(inName, data);
+  const progressHandler = ({ progress, time }) => {
+    if (typeof progress === 'number' && isFinite(progress)) onProgress && onProgress(Math.max(0, Math.min(100, Math.round(progress * 100))));
+  };
+  f.on('progress', progressHandler);
+  try {
+    await f.exec(args);
+  } finally {
+    f.off('progress', progressHandler);
+  }
+  let out;
+  try { out = await f.readFile(outName); }
+  catch(e){ const tail = _ffmpegLogs.slice(-6).join('\n'); throw new Error('转换失败，输出未生成。' + (tail ? '\n' + tail : '')); }
+  try { await f.deleteFile(inName); } catch(e){}
+  try { await f.deleteFile(outName); } catch(e){}
+  if (onLog) onLog(_ffmpegLogs);
+  return out;
+}
+
+/* 音频质量映射 */
+function audioQualityArg(level){
+  return level === '1' ? ['-q:a','5'] : level === '2' ? ['-q:a','8'] : ['-q:a','2'];
+}
+
+/* Web Audio 兜底：解码为 WAV（引擎不可用时的音频→WAV 路径） */
+function decodeToWav(arrayBuffer){
+  return new Promise((resolve, reject) => {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    ctx.decodeAudioData(arrayBuffer, (buf) => {
+      const ch = Math.min(2, buf.numberOfChannels), rate = buf.sampleRate;
+      const len = buf.length * ch;
+      const pcm = new Int16Array(len);
+      for (let c = 0; c < ch; c++){
+        const d = buf.getChannelData(c);
+        for (let i = 0; i < buf.length; i++){
+          const s = Math.max(-1, Math.min(1, d[i]));
+          pcm[i * ch + c] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+        }
+      }
+      const h = new ArrayBuffer(44), v = new DataView(h);
+      const ws = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+      ws(0,'RIFF'); v.setUint32(4, 36 + pcm.byteLength, true); ws(8,'WAVE'); ws(12,'fmt ');
+      v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, ch, true);
+      v.setUint32(24, rate, true); v.setUint32(28, rate * ch * 2, true);
+      v.setUint16(32, ch * 2, true); v.setUint16(34, 16, true); ws(36,'data'); v.setUint32(40, pcm.byteLength, true);
+      resolve(new Blob([h, pcm], { type: 'audio/wav' }));
+      ctx.close && ctx.close();
+    }, reject);
+  });
+}
+
+/* ================================================================
+   文件条目与 UI
+   ================================================================ */
+const CAT_COLORS = {
+  audio:'#7C6FE8', video:'#E06C5B', image:'#4FB8C9', doc:'#4A9BE8',
+  sheet:'#3FBF8F', pdf:'#E8A33D', archive:'#C07BE0', detect:'#8A94A6'
+};
+function badgeStyle(cat){ return { background: CAT_COLORS[cat] || '#8A94A6' }; }
+
+async function addFiles(route, fileList){
+  if (state.busy){ toast('正在处理中', '请等待当前任务完成后再添加文件。', 'info'); return; }
+  const items = state.files[route] = state.files[route] || [];
+  const target = $(`[data-files="${route}"]`);
+  for (const file of fileList){
+    const id = uid();
+    const item = { id, file, name: file.name, size: file.size, ext: extOf(file.name), status: 'ready', progress: 0, error: '', result: null };
+    items.push(item);
+    if (route === 'detect'){
+      sniffFile(item).then(() => renderDetectCard(item));
+    } else {
+      renderFileCard(route, item, target);
+      sniffFile(item).then(() => renderFileCard(route, item, target));
+    }
+  }
+  renderOptions(route);
+}
+async function sniffFile(item){
+  try {
+    const head = new Uint8Array(await item.file.slice(0, 65536).arrayBuffer());
+    const magic = detectMagic(head);
+    item.magic = magic ? { name: magic.name, ext: magic.ext, cat: magic.cat, prop: magic.prop, brand: magic.detect || '' } : null;
+    const ext = item.ext;
+    const prop = proprietaryInfo(ext);
+    if (prop){ item.propInfo = prop; item.prop = true; }
+    else item.prop = false;
+    if (magic && magic.ext && magic.ext !== 'zip' && ext && ext !== magic.ext && !prop){
+      item.mismatch = { real: magic.ext };
+    } else item.mismatch = null;
+  } catch(e){}
+}
+function renderFileCard(route, item, container){
+  let el = $(`#${item.id}`);
+  const progress = item.status === 'working' ? item.progress : item.status === 'done' ? 100 : 0;
+  if (!el){
+    el = document.createElement('div');
+    el.className = 'file-card'; el.id = item.id;
+    (container || $(`[data-files="${route}"]`)).appendChild(el);
+  }
+  const mime = item.file.type;
+  const extUp = (item.ext || '?').toUpperCase().slice(0, 4);
+  const subParts = [];
+  subParts.push(`<span>${fmtSize(item.size)}</span>`);
+  if (item.magic) subParts.push(`<span class="real">识别：${item.magic.name}</span>`);
+  if (item.mismatch) subParts.push(`<span class="warn">扩展名疑为 ${item.mismatch.real} 伪装（改名即可用）</span>`);
+  if (item.propInfo) subParts.push(`<span class="warn">专有格式：${item.propInfo.name}</span>`);
+  if (item.error) subParts.push(`<span class="err">${item.error}</span>`);
+  const statusText = item.status === 'working' ? (progress >= 0 ? progress + '%' : '处理中') : item.status === 'done' ? '完成' : item.status === 'error' ? '失败' : '就绪';
+  el.innerHTML = `
+    <div class="file-badge ext" style="${cssObj(badgeStyle(route))}">${extUp}</div>
+    <div class="file-meta">
+      <div class="file-name">${esc(item.name)}</div>
+      <div class="file-sub">${subParts.join('')}</div>
+    </div>
+    <div class="file-progress ${item.status === 'done' ? 'done' : item.status === 'error' ? 'err' : ''}" ${item.status === 'ready' ? 'style="opacity:.25"' : ''}>
+      <div class="bar" style="width:${progress}%"></div><span class="pct">${progress}%</span>
+    </div>
+    <div class="file-status ${item.status === 'done' ? 'done' : item.status === 'error' ? 'err' : ''}">${statusText}</div>
+    <button class="file-x" title="移除" aria-label="移除文件">×</button>`;
+  const x = el.querySelector('.file-x');
+  x.onclick = () => {
+    state.files[route] = state.files[route].filter(i => i.id !== item.id);
+    el.remove();
+    if (item.result && item.result.url) URL.revokeObjectURL(item.result.url);
+    renderOptions(route);
+  };
+  el.querySelector('.file-progress').onclick = null;
+}
+function cssObj(o){ return Object.entries(o).map(([k,v]) => `${k}:${v}`).join(';'); }
+function esc(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function renderOptions(route){
+  const files = state.files[route] || [];
+  const first = files[0];
+  const targetSel = { audio:'#a-target', video:'#v-target', doc:'#d-target', sheet:'#s-target' }[route];
+  if (targetSel){
+    const sel = $(targetSel);
+    const targets = targetsFor(route, first || {ext: ''});
+    const cur = sel.value;
+    sel.innerHTML = targets.map(t => `<option value="${t.v}">${t.label}</option>`).join('');
+    if (targets.some(t => t.v === cur)) sel.value = cur;
+    else sel.value = targets[0].v;
+    sel.dispatchEvent(new Event('refresh', { bubbles: true }));
+  }
+  // 更新操作说明
+  if (route === 'archive' && first){
+    const action = $('#z-action').value;
+    const isArchive = ['zip','tar','gz','tgz'].includes(first.ext) || (first.magic && ['zip','rar','7z','gz','tar'].includes(first.magic.ext));
+    if (action === 'extract' && !isArchive){
+      toast('提示', '当前文件不是可解压的压缩包，请切换到「打包为 ZIP」等操作。', 'info', 3500);
+    }
+  }
+}
+function targetsFor(route, file){
+  const ext = file.ext;
+  if (route === 'audio'){
+    return [
+      { v:'mp3', label:'MP3（通用兼容）' }, { v:'wav', label:'WAV（无损）' }, { v:'ogg', label:'OGG（开源）' },
+      { v:'m4a', label:'M4A（AAC）' }, { v:'aac', label:'AAC' }, { v:'flac', label:'FLAC（无损）' }, { v:'opus', label:'Opus（高压缩）' }
+    ].filter(t => t.v !== ext);
+  }
+  if (route === 'video'){
+    return [
+      { v:'mp4', label:'MP4（H.264+AAC）' }, { v:'webm', label:'WebM（VP9+Opus）' },
+      { v:'mov', label:'MOV（QuickTime）' }, { v:'avi', label:'AVI（兼容）' },
+      { v:'mkv', label:'MKV（封装）' }, { v:'gif', label:'GIF 动图' }
+    ].filter(t => t.v !== ext);
+  }
+  if (route === 'doc'){
+    const targets = [];
+    if (ext === 'docx'){ targets.push({ v:'txt', label:'纯文本 TXT' }, { v:'html', label:'HTML 网页' }, { v:'pdf', label:'PDF（打印）' }); }
+    else if (ext === 'md'){ targets.push({ v:'html', label:'HTML 网页' }, { v:'pdf', label:'PDF（打印）' }, { v:'txt', label:'纯文本 TXT' }); }
+    else if (ext === 'html' || ext === 'htm'){ targets.push({ v:'txt', label:'纯文本 TXT' }, { v:'pdf', label:'PDF（打印）' }); }
+    else if (ext === 'rtf'){ targets.push({ v:'txt', label:'纯文本 TXT' }, { v:'html', label:'HTML 网页' }, { v:'pdf', label:'PDF（打印）' }); }
+    else { targets.push({ v:'txt', label:'纯文本 TXT' }, { v:'html', label:'HTML 网页' }, { v:'pdf', label:'PDF（打印）' }, { v:'utf8', label:'转为 UTF-8（修复乱码）' }); }
+    return targets;
+  }
+  if (route === 'sheet'){
+    if (['xlsx','xls'].includes(ext)) return [{ v:'csv', label:'CSV（Excel 兼容）' }, { v:'json', label:'JSON' }, { v:'html', label:'HTML 表格' }];
+    if (['csv','tsv'].includes(ext)) return [{ v:'xlsx', label:'Excel XLSX' }, { v:'json', label:'JSON' }];
+    if (ext === 'json') return [{ v:'xlsx', label:'Excel XLSX' }, { v:'csv', label:'CSV' }];
+    return [{ v:'xlsx', label:'Excel XLSX' }, { v:'csv', label:'CSV' }];
+  }
+  return [];
+}
+
+/* ---------- 结果区 ---------- */
+function addResult(route, name, size, blob){
+  const list = $(`[data-results-list="${route}"]`);
+  const wrap = $(`[data-results="${route}"]`);
+  wrap.classList.add('show');
+  const row = document.createElement('div');
+  row.className = 'result-item';
+  (state.results[route] = state.results[route] || []);
+  row.innerHTML = `
+    <span class="r-name">${esc(name)}</span><span class="r-size">${fmtSize(size)}</span>
+    <span class="r-act"><button class="file-dl" type="button">下载</button></span>`;
+  list.appendChild(row);
+  row.querySelector('.file-dl').onclick = () => saveBlob(blob, name);
+  state.results[route].push({ name, size, blob });
+  return {};
+}
+function clearResults(route){
+  state.results[route] = [];
+  const wrap = $(`[data-results="${route}"]`);
+  const list = $(`[data-results-list="${route}"]`);
+  list.innerHTML = ''; wrap.classList.remove('show');
+}
+function downloadAll(route){
+  const rs = state.results[route] || [];
+  if (!rs.length){ toast('没有结果', '当前类别还没有转换结果。', 'info'); return; }
+  saveMany(rs.map(r => ({ blob: r.blob, name: r.name })));
+}
+
+/* ---------- 日志面板 ---------- */
+function showLogs(tail){
+  let panel = $('#logpanel');
+  if (!panel){
+    panel = document.createElement('div');
+    panel.id = 'logpanel'; panel.className = 'logpanel';
+    $('#main').appendChild(panel);
+  }
+  panel.innerHTML = '<div class="tail">' + esc(tail.join('\n')) + '</div>';
+  panel.classList.add('show');
+  panel.scrollTop = panel.scrollHeight;
+}
+
+/* ---------- 自绘下拉组件（替代原生 select） ---------- */
+function initCustomSelects(){
+  $$('select').forEach(sel => {
+    if (sel.dataset.dd) return;
+    sel.dataset.dd = '1';
+    const wrap = document.createElement('div');
+    wrap.className = 'dd';
+    const btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'dd-btn';
+    btn.setAttribute('aria-haspopup', 'listbox');
+    const label = document.createElement('span'); label.className = 'dd-label';
+    const chev = document.createElement('span'); chev.className = 'dd-chev';
+    btn.append(label, chev);
+    const menu = document.createElement('div');
+    menu.className = 'dd-menu'; menu.setAttribute('role', 'listbox');
+    function currentText(){ return sel.options[sel.selectedIndex] ? sel.options[sel.selectedIndex].textContent : ''; }
+    function rebuild(){
+      menu.innerHTML = '';
+      [...sel.options].forEach(opt => {
+        const o = document.createElement('button');
+        o.type = 'button'; o.className = 'dd-opt' + (opt.value === sel.value ? ' sel' : '');
+        o.textContent = opt.textContent;
+        o.setAttribute('role', 'option');
+        o.onclick = (e) => {
+          e.stopPropagation();
+          sel.value = opt.value;
+          label.textContent = opt.textContent;
+          close();
+          rebuild();
+          sel.dispatchEvent(new Event('change', { bubbles: true }));
+        };
+        menu.appendChild(o);
+      });
+    }
+    function open(){ rebuild(); menu.classList.add('open'); wrap.classList.add('open'); }
+    function close(){ menu.classList.remove('open'); wrap.classList.remove('open'); }
+    btn.onclick = (e) => { e.stopPropagation(); wrap.classList.contains('open') ? close() : open(); };
+    label.textContent = currentText();
+    sel.addEventListener('change', () => { label.textContent = currentText(); });
+    sel.addEventListener('refresh', () => { label.textContent = currentText(); });
+    document.addEventListener('click', (e) => { if (!wrap.contains(e.target)) close(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+    wrap.append(btn, menu);
+    sel.insertAdjacentElement('afterend', wrap);
+    sel.style.display = 'none';
+  });
+}
+
+/* ---------- 网页音频提取 ---------- */
+async function extractWebAudio(){
+  const url = $('#webUrl').value.trim();
+  if (!url){ toast('提示', '请先粘贴网页地址或音频直链'); return; }
+  if (!/^https?:\/\//i.test(url)){ toast('提示', '请输入以 http:// 或 https:// 开头的完整链接'); return; }
+  const btn = $('#webExtractBtn');
+  btn.disabled = true; btn.textContent = '提取中…';
+  const box = $('#webResult');
+  box.innerHTML = '<div class="web-loading">正在抓取页面并解析音频…</div>';
+  try{
+    const r = await fetch('/api/extract?url=' + encodeURIComponent(url));
+    const data = await r.json();
+    if (data.error){ box.innerHTML = ''; toast('提取失败', data.error, 'err'); return; }
+    renderWebAudios(data);
+  }catch(e){
+    box.innerHTML = '';
+    toast('提取失败', e.message || String(e), 'err');
+  }finally{
+    btn.disabled = false; btn.textContent = '提取音频';
+  }
+}
+
+function renderWebAudios(data){
+  const box = $('#webResult');
+  const list = (data.audios || []).filter(a => a && a.url);
+  if (!list.length){ box.innerHTML = ''; toast('未找到音频', '页面中没有解析到可下载的音频链接', 'warn'); return; }
+  const head = '<div class="web-title">' + esc(data.title || '网页音频') + ' · 找到 ' + list.length + ' 个候选</div>';
+  const items = list.map((a, i) => {
+    const typeLabel = a.type === 'video' ? '视频（下载后可转音频）' : '音频';
+    return '<div class="web-item">'
+      + '<div class="web-item-info">'
+      + '<div class="web-item-name" title="' + esc(a.url) + '">' + esc(a.name || ('候选 ' + (i + 1))) + '</div>'
+      + '<div class="web-item-sub">' + typeLabel + ' · ' + fmtSize(a.size) + '</div>'
+      + '</div>'
+      + '<button class="btn btn-primary btn-sm" data-wurl="' + esc(a.url) + '" data-wname="' + esc(a.name || 'audio') + '">下载</button>'
+      + '</div>';
+  }).join('');
+  box.innerHTML = head + items;
+  box.querySelectorAll('[data-wurl]').forEach(b => {
+    b.addEventListener('click', () => downloadWebAudio(b.dataset.wurl, b.dataset.wname));
+  });
+}
+
+async function downloadWebAudio(url, name){
+  try{
+    const path = await window.pywebview.api.pick_save_path(name);
+    if (!path){ return; }
+    const r = await fetch('/api/download?url=' + encodeURIComponent(url) + '&path=' + encodeURIComponent(path));
+    const data = await r.json();
+    if (data.ok){ toast('下载完成', path + '（' + fmtSize(data.bytes) + '）'); }
+    else{ toast('下载失败', data.error || '未知错误', 'err'); }
+  }catch(e){
+    toast('下载失败', e.message || String(e), 'err');
+  }
+}
+
+/* ---------- 路由 ---------- */
+function setRoute(route){
+  state.route = route;
+  $$('.nav-btn').forEach(b => b.classList.toggle('active', b.dataset.route === route));
+  $$('.module').forEach(m => { m.hidden = m.dataset.module !== route; });
+  if (route === 'detect'){ /* 无额外 */ }
+  renderOptions(route);
+  const panel = $('#logpanel'); if (panel) panel.classList.remove('show');
+  window.scrollTo(0, 0);
+}
+
+/* ---------- 全局事件绑定 ---------- */
+function initCore(){
+  engineDot();
+  initCustomSelects();
+  /* 锁定页面缩放：阻止 Ctrl+滚轮 / Ctrl+± 误触放大，避免界面被挤出可视区域 */
+  document.addEventListener('wheel', e => { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  document.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && ['+', '-', '=', '0'].includes(e.key)) e.preventDefault();
+  });
+  try { document.addEventListener('gesturestart', e => e.preventDefault()); } catch(e){}
+  // 导航
+  $('#nav').addEventListener('click', e => {
+    const btn = e.target.closest('.nav-btn');
+    if (btn) setRoute(btn.dataset.route);
+  });
+  // 网页音频提取
+  $('#webExtractBtn').addEventListener('click', extractWebAudio);
+  $('#webUrl').addEventListener('keydown', e => { if (e.key === 'Enter') extractWebAudio(); });
+  // 隐藏文件输入
+  const fileInput = $('#fileInput');
+  $$('.dropzone').forEach(dz => {
+    dz.addEventListener('click', () => { fileInput.dataset.route = dz.dataset.drop; fileInput.click(); });
+    dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag'); });
+    dz.addEventListener('dragleave', () => dz.classList.remove('drag'));
+    dz.addEventListener('drop', e => {
+      e.preventDefault(); dz.classList.remove('drag');
+      if (e.dataTransfer.files.length) addFiles(dz.dataset.drop, e.dataTransfer.files);
+    });
+  });
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files.length) addFiles(fileInput.dataset.route || 'audio', fileInput.files);
+    fileInput.value = '';
+  });
+  // 全局拖放
+  window.addEventListener('dragover', e => e.preventDefault());
+  window.addEventListener('drop', e => {
+    if (!e.target.closest('.dropzone')){
+      e.preventDefault();
+      if (e.dataTransfer.files.length) addFiles(state.route, e.dataTransfer.files);
+    }
+  });
+  // 转换按钮
+  $$('[data-convert]').forEach(b => b.addEventListener('click', () => runConvert(b.dataset.convert)));
+  // 清空
+  $$('[data-clear]').forEach(b => b.addEventListener('click', () => {
+    const route = b.closest('.module').dataset.module;
+    (state.files[route] || []).forEach(i => { if (i.result && i.result.url) URL.revokeObjectURL(i.result.url); });
+    state.files[route] = [];
+    $(`[data-files="${route}"]`).innerHTML = '';
+    clearResults(route);
+    renderOptions(route);
+  }));
+  // 全部下载
+  $$('[data-dlall]').forEach(b => b.addEventListener('click', () => downloadAll(b.dataset.dlall)));
+  // 操作切换时刷新选项提示
+  $('#z-action') && $('#z-action').addEventListener('change', () => renderOptions('archive'));
+  // 引擎重试
+  document.addEventListener('keydown', e => {});
+  ['video','doc','sheet'].forEach(renderOptions);
+  setRoute('audio');
+}
+
+</script>
+<script>
+/* ================================================================
+   模块转换逻辑：audio / video / image / doc / sheet / pdf / archive / detect
+   ================================================================ */
+const CONVERTERS = {};
+
+function setProg(h, it, p){ it.progress = Math.max(0, Math.min(100, Math.round(p))); h.prog(it, it.progress); }
+
+/* ---------- 音频 ---------- */
+CONVERTERS.audio = {
+  async run(items, h){
+    for (const it of items){
+      h.mark(it, 'working');
+      try {
+        const outs = await convertAudio(it, h);
+        (outs || []).forEach(o => h.add(o.name, o.blob));
+        h.mark(it, 'done');
+      } catch(e){ h.mark(it, 'error', (e && e.message || String(e)).split('\n')[0].slice(0, 150)); }
+    }
+  }
+};
+const AUDIO_TARGETS = { mp3:'audio/mpeg', wav:'audio/wav', ogg:'audio/ogg', m4a:'audio/mp4', aac:'audio/aac', flac:'audio/flac', opus:'audio/ogg' };
+async function convertAudio(it, h){
+  const target = $('#a-target').value;
+  const quality = $('#a-quality').value;
+  const base = baseOf(it.name);
+  if (state.engine !== 'ready' && target === 'wav'){
+    const buf = await it.file.arrayBuffer();
+    setProg(h, it, 45);
+    const blob = await decodeToWav(buf);
+    setProg(h, it, 100);
+    return [{ blob, name: base + '.wav' }];
+  }
+  const args = ['-i', 'IN'];
+  if (target === 'mp3') args.push('-c:a','libmp3lame', ...audioQualityArg(quality));
+  else if (target === 'wav') args.push('-c:a','pcm_s16le');
+  else if (target === 'ogg') args.push('-c:a','libvorbis', ...audioQualityArg(quality));
+  else if (target === 'm4a' || target === 'aac') args.push('-c:a','aac','-b:a','192k');
+  else if (target === 'flac') args.push('-c:a','flac');
+  else if (target === 'opus') args.push('-c:a','libopus','-b:a','128k');
+  args.push('-y', 'OUT');
+  const data = await ffmpegRun(it.file, args, 'out.' + target, p => setProg(h, it, p), logs => showLogs(logs.slice(-8)));
+  return [{ blob: new Blob([data], { type: AUDIO_TARGETS[target] || 'application/octet-stream' }), name: base + '.' + target }];
+}
+
+/* ---------- 视频 ---------- */
+CONVERTERS.video = {
+  async run(items, h){
+    for (const it of items){
+      h.mark(it, 'working');
+      try {
+        const outs = await convertVideo(it, h);
+        (outs || []).forEach(o => h.add(o.name, o.blob));
+        h.mark(it, 'done');
+      } catch(e){ h.mark(it, 'error', (e && e.message || String(e)).split('\n')[0].slice(0, 150)); }
+    }
+  }
+};
+async function convertVideo(it, h){
+  const target = $('#v-target').value;
+  const res = $('#v-res').value;
+  const crf = $('#v-quality').value;
+  const fps = $('#v-fps').value;
+  const base = baseOf(it.name);
+  const args = ['-i', 'IN'];
+  if (target === 'gif'){
+    const vf = [];
+    if (fps !== 'orig') vf.push('fps=' + fps);
+    vf.push('scale=min(720\\,iw):-2');
+    args.push('-vf', vf.join(','));
+    args.push('-f', 'gif', '-loop', '0');
+  } else {
+    const vf = [];
+    if (res !== 'orig') vf.push('scale=' + res + ':force_original_aspect_ratio=decrease');
+    if (fps !== 'orig') vf.push('fps=' + fps);
+    if (vf.length) args.push('-vf', vf.join(','));
+    if (target === 'mp4' || target === 'm4v' || target === 'mov'){
+      args.push('-c:v','libx264','-preset','veryfast','-crf',crf,'-pix_fmt','yuv420p','-c:a','aac','-b:a','128k');
+    } else if (target === 'webm'){
+      args.push('-c:v','libvpx-vp9','-crf',crf,'-b:v','0','-c:a','libopus','-b:a','128k');
+    } else if (target === 'avi'){
+      args.push('-c:v','mpeg4','-q:v','4','-c:a','libmp3lame','-b:a','128k');
+    } else if (target === 'mkv'){
+      args.push('-c:v','libx264','-preset','veryfast','-crf',crf,'-c:a','aac','-b:a','128k');
+    }
+  }
+  args.push('-y', 'OUT');
+  const data = await ffmpegRun(it.file, args, 'out.' + target, p => setProg(h, it, p), logs => showLogs(logs.slice(-8)));
+  const mime = { mp4:'video/mp4', m4v:'video/mp4', webm:'video/webm', mov:'video/quicktime', avi:'video/x-msvideo', mkv:'video/x-matroska', gif:'image/gif' }[target] || 'application/octet-stream';
+  return [{ blob: new Blob([data], { type: mime }), name: base + '.' + target }];
+}
+
+/* ---------- 图片 ---------- */
+CONVERTERS.image = {
+  async run(items, h){
+    for (const it of items){
+      h.mark(it, 'working');
+      try {
+        const target = $('#i-target').value;
+        const q = parseFloat($('#i-quality').value);
+        setProg(h, it, 20);
+        const blob = await imgToBlob(it.file, target, q);
+        setProg(h, it, 100);
+        h.add(baseOf(it.name) + '.' + (target === 'jpeg' ? 'jpg' : target), blob);
+        h.mark(it, 'done');
+      } catch(e){ h.mark(it, 'error', (e && e.message || String(e)).split('\n')[0].slice(0, 150)); }
+    }
+  }
+};
+function imgToBlob(file, target, quality){
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth || 1; canvas.height = img.naturalHeight || 1;
+        const ctx = canvas.getContext('2d');
+        if (target === 'jpeg'){ ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height); }
+        ctx.drawImage(img, 0, 0);
+        const mime = target === 'png' ? 'image/png' : target === 'webp' ? 'image/webp' : 'image/jpeg';
+        canvas.toBlob(b => b ? resolve(b) : reject(new Error('编码失败，可能超出浏览器限制')), mime, quality);
+      } catch(e){ reject(e); }
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('无法解码该图片（SVG/特殊格式可能不支持）')); };
+    img.src = url;
+  });
+}
+
+/* ---------- 文档 ---------- */
+CONVERTERS.doc = {
+  async run(items, h){
+    for (const it of items){
+      h.mark(it, 'working');
+      try {
+        const outs = await convertDoc(it);
+        (outs || []).forEach(o => h.add(o.name, o.blob));
+        h.mark(it, 'done');
+        if (!outs || !outs.length) toast('已打开打印窗口', '请在打印对话框中选择「Microsoft Print to PDF」或「另存为 PDF」。', 'info', 7000);
+      } catch(e){ h.mark(it, 'error', (e && e.message || String(e)).split('\n')[0].slice(0, 150)); }
+    }
+  }
+};
+async function convertDoc(it){
+  const target = $('#d-target').value;
+  const ext = it.ext;
+  const base = baseOf(it.name);
+  if (target === 'utf8'){
+    const buf = new Uint8Array(await it.file.arrayBuffer());
+    const enc = detectEncoding(buf);
+    const text = decodeByEnc(buf, enc);
+    return [{ blob: new Blob(['\ufeff' + text], { type: 'text/plain;charset=utf-8' }), name: base + '.txt' }];
+  }
+  if (ext === 'docx'){
+    const buf = await it.file.arrayBuffer();
+    if (target === 'txt'){
+      const r = await mammoth.extractRawText({ arrayBuffer: buf });
+      return [{ blob: new Blob(['\ufeff' + r.value], { type: 'text/plain;charset=utf-8' }), name: base + '.txt' }];
+    }
+    if (target === 'html'){
+      const r = await mammoth.convertToHtml({ arrayBuffer: buf });
+      return [{ blob: new Blob([docHtmlShell(base, r.value)], { type: 'text/html;charset=utf-8' }), name: base + '.html' }];
+    }
+    if (target === 'pdf'){
+      const r = await mammoth.extractRawText({ arrayBuffer: buf });
+      printToPdf(r.value || '（空文档）', base);
+      return [];
+    }
+  }
+  const text = await readTextFile(it.file);
+  if (target === 'pdf'){ printToPdf(text, base); return []; }
+  if (target === 'html') return [{ blob: new Blob([mdToHtml(text, base)], { type: 'text/html;charset=utf-8' }), name: base + '.html' }];
+  if (target === 'txt') return [{ blob: new Blob(['\ufeff' + text], { type: 'text/plain;charset=utf-8' }), name: base + '.txt' }];
+  return [];
+}
+function docHtmlShell(title, body){
+  return '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><title>' + esc(title) +
+    '</title><style>body{max-width:780px;margin:30px auto;font-family:system-ui;line-height:1.8;padding:0 16px;color:#222}img{max-width:100%}</style></head><body>' + body + '</body></html>';
+}
+function detectEncoding(buf){
+  if (buf.length >= 3 && buf[0] === 0xEF && buf[1] === 0xBB && buf[2] === 0xBF) return 'utf-8';
+  if (buf.length >= 2 && buf[0] === 0xFF && buf[1] === 0xFE) return 'utf-16le';
+  if (buf.length >= 2 && buf[0] === 0xFE && buf[1] === 0xFF) return 'utf-16be';
+  try { new TextDecoder('utf-8', { fatal: true }).decode(buf); return 'utf-8'; } catch(e){ return 'gbk'; }
+}
+function decodeByEnc(buf, enc){
+  if (enc === 'utf-16le' || enc === 'utf-16be') return new TextDecoder(enc).decode(buf);
+  if (enc === 'gbk') return new TextDecoder('gbk').decode(buf);
+  return new TextDecoder('utf-8').decode(buf);
+}
+async function readTextFile(file){
+  const buf = new Uint8Array(await file.arrayBuffer());
+  return decodeByEnc(buf, detectEncoding(buf));
+}
+function printToPdf(text, title){
+  const sheet = $('#printSheet');
+  sheet.innerHTML = '<h1>' + esc(title) + '</h1>' + mdToHtmlBody(text);
+  window.print();
+}
+function inlineMd(s){
+  return s
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2">$1</a>');
+}
+function mdToHtmlBody(src){
+  const lines = String(src || '').replace(/\r\n/g, '\n').split('\n');
+  let html = '', inCode = false, codeBuf = [], listTag = null, inQuote = false;
+  for (const raw of lines){
+    const t = raw.trim();
+    if (t.startsWith('```')){
+      if (inCode){ html += '<pre><code>' + esc(codeBuf.join('\n')) + '</code></pre>'; codeBuf = []; inCode = false; }
+      else inCode = true;
+      continue;
+    }
+    if (inCode){ codeBuf.push(raw); continue; }
+    if (!t){
+      if (listTag){ html += '</' + listTag + '>'; listTag = null; }
+      if (inQuote){ html += '</blockquote>'; inQuote = false; }
+      continue;
+    }
+    let m;
+    if ((m = /^(#{1,4})\s+(.*)$/.exec(t))){ const lv = m[1].length; html += '<h' + (lv + 1) + '>' + inlineMd(m[2]) + '</h' + (lv + 1) + '>'; }
+    else if (/^(-{3,}|\*{3,})$/.test(t)){ html += '<hr>'; }
+    else if ((m = /^>\s?(.*)$/.exec(t))){ if (!inQuote){ html += '<blockquote>'; inQuote = true; } html += inlineMd(m[1]) + '<br>'; }
+    else if ((m = /^[-*+]\s+(.*)$/.exec(t))){ if (listTag !== 'ul'){ if (listTag) html += '</' + listTag + '>'; html += '<ul>'; listTag = 'ul'; } html += '<li>' + inlineMd(m[1]) + '</li>'; }
+    else if ((m = /^\d+[.、]\s+(.*)$/.exec(t))){ if (listTag !== 'ol'){ if (listTag) html += '</' + listTag + '>'; html += '<ol>'; listTag = 'ol'; } html += '<li>' + inlineMd(m[1]) + '</li>'; }
+    else { html += '<p>' + inlineMd(t) + '</p>'; }
+  }
+  if (inCode) html += '<pre><code>' + esc(codeBuf.join('\n')) + '</code></pre>';
+  if (listTag) html += '</' + listTag + '>';
+  if (inQuote) html += '</blockquote>';
+  return html;
+}
+function mdToHtml(src, title){
+  return docHtmlShell(title, mdToHtmlBody(src));
+}
+
+/* ---------- 表格 ---------- */
+CONVERTERS.sheet = {
+  async run(items, h){
+    for (const it of items){
+      h.mark(it, 'working');
+      try {
+        const outs = await convertSheet(it);
+        (outs || []).forEach(o => h.add(o.name, o.blob));
+        h.mark(it, 'done');
+      } catch(e){ h.mark(it, 'error', (e && e.message || String(e)).split('\n')[0].slice(0, 150)); }
+    }
+  }
+};
+async function convertSheet(it){
+  const target = $('#s-target').value;
+  const base = baseOf(it.name);
+  const ext = it.ext;
+  const X = window.XLSX;
+  if (!X) throw new Error('表格引擎未加载，请刷新后重试');
+  if (ext === 'json' && (target === 'xlsx' || target === 'csv')){
+    const data = JSON.parse(await it.file.text());
+    const rows = Array.isArray(data) ? data : [data];
+    const ws = X.utils.json_to_sheet(rows);
+    const wb = X.utils.book_new();
+    X.utils.book_append_sheet(wb, ws, 'Sheet1');
+    if (target === 'xlsx'){
+      const out = X.write(wb, { bookType: 'xlsx', type: 'array' });
+      return [{ blob: new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), name: base + '.xlsx' }];
+    }
+    return [{ blob: new Blob(['\ufeff' + X.utils.sheet_to_csv(ws)], { type: 'text/csv;charset=utf-8' }), name: base + '.csv' }];
+  }
+  const buf = await it.file.arrayBuffer();
+  const wb = X.read(buf, { type: 'array' });
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  if (target === 'csv') return [{ blob: new Blob(['\ufeff' + X.utils.sheet_to_csv(ws)], { type: 'text/csv;charset=utf-8' }), name: base + '.csv' }];
+  if (target === 'json'){
+    const rows = X.utils.sheet_to_json(ws, { defval: null });
+    return [{ blob: new Blob([JSON.stringify(rows, null, 2)], { type: 'application/json;charset=utf-8' }), name: base + '.json' }];
+  }
+  if (target === 'html') return [{ blob: new Blob(['<!doctype html><meta charset="utf-8">' + X.utils.sheet_to_html(ws)], { type: 'text/html;charset=utf-8' }), name: base + '.html' }];
+  if (target === 'xlsx'){
+    const out = X.write(wb, { bookType: 'xlsx', type: 'array' });
+    return [{ blob: new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), name: base + '.xlsx' }];
+  }
+  return [];
+}
+
+/* ---------- PDF ---------- */
+CONVERTERS.pdf = {
+  async run(items, h){
+    const action = $('#p-action').value;
+    try {
+      if (action === 'merge'){ items.forEach(i => h.mark(i, 'working')); await pdfMerge(items, h); items.forEach(i => h.mark(i, 'done')); return; }
+      if (action === 'imgtopdf'){
+        const imgs = items.filter(i => ['png','jpg','jpeg','webp','bmp','gif'].includes(i.ext) || (i.magic && ['png','jpg','jpeg','webp','gif'].includes(i.magic.ext)));
+        if (!imgs.length) throw new Error('请添加至少一张图片（PNG/JPG/WebP/BMP/GIF）');
+        imgs.forEach(i => h.mark(i, 'working'));
+        await pdfImgToPdf(imgs, h);
+        imgs.forEach(i => h.mark(i, 'done'));
+        return;
+      }
+      for (const it of items){
+        if (!['pdf'].includes(it.ext) && !(it.magic && it.magic.ext === 'pdf')){ h.mark(it, 'error', '不是 PDF 文件'); continue; }
+        h.mark(it, 'working');
+        try {
+          if (action === 'extract'){ const outs = await pdfExtract(it, h); outs.forEach(o => h.add(o.name, o.blob)); }
+          else if (action === 'toimg'){ await pdfToImages(it, h); }
+          else if (action === 'totext'){ const outs = await pdfToText(it, h); outs.forEach(o => h.add(o.name, o.blob)); }
+          h.mark(it, 'done');
+        } catch(e){ h.mark(it, 'error', (e && e.message || String(e)).split('\n')[0].slice(0, 150)); }
+      }
+    } catch(e){
+      items.forEach(i => h.mark(i, 'error', (e && e.message || String(e)).split('\n')[0].slice(0, 150)));
+    }
+  }
+};
+function parseRanges(str, pageCount){
+  const set = new Set();
+  for (const part of String(str || '').split(',')){
+    const m = /^\s*(\d+)\s*-\s*(\d+)\s*$/.exec(part) || /^\s*(\d+)\s*$/.exec(part);
+    if (!m) continue;
+    const a = parseInt(m[1], 10), b = m[2] ? parseInt(m[2], 10) : a;
+    for (let i = a; i <= b; i++) if (i >= 1 && i <= pageCount) set.add(i);
+  }
+  return [...set].sort((x, y) => x - y);
+}
+async function pdfMerge(items, h){
+  const P = window.PDFLib;
+  if (!P) throw new Error('PDF 引擎未加载');
+  const merged = await P.PDFDocument.create();
+  for (let i = 0; i < items.length; i++){
+    const it = items[i];
+    setProg(h, it, Math.round((i / items.length) * 90));
+    const src = await P.PDFDocument.load(await it.file.arrayBuffer());
+    const pages = await merged.copyPages(src, src.getPageIndices());
+    pages.forEach(p => merged.addPage(p));
+  }
+  setProg(h, items[items.length - 1], 95);
+  const bytes = await merged.save();
+  h.add('merged.pdf', new Blob([bytes], { type: 'application/pdf' }));
+}
+async function pdfExtract(it, h){
+  const P = window.PDFLib;
+  const src = await P.PDFDocument.load(await it.file.arrayBuffer());
+  const ranges = parseRanges($('#p-pages').value, src.getPageCount());
+  if (!ranges.length) throw new Error('页面范围无效（示例：1-3,5,8-10）');
+  const out = await P.PDFDocument.create();
+  const pages = await out.copyPages(src, ranges.map(i => i - 1));
+  pages.forEach(p => out.addPage(p));
+  const bytes = await out.save();
+  const label = ranges.length === 1 ? 'p' + ranges[0] : 'p' + ranges[0] + '-' + ranges[ranges.length - 1];
+  return [{ blob: new Blob([bytes], { type: 'application/pdf' }), name: baseOf(it.name) + '_' + label + '.pdf' }];
+}
+async function pdfToImages(it, h){
+  const fmt = $('#p-imgfmt').value;
+  const scale = parseFloat({ '1': 1, '2': 1.7, '3': 2.4 }[$('#p-dpi').value] || 1);
+  if (!window.pdfjsLib) throw new Error('PDF 渲染引擎未加载');
+  window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER_SRC;
+  const doc = await window.pdfjsLib.getDocument({ data: await it.file.arrayBuffer() }).promise;
+  for (let i = 1; i <= doc.numPages; i++){
+    setProg(h, it, Math.round(((i - 1) / doc.numPages) * 95));
+    const page = await doc.getPage(i);
+    const vp = page.getViewport({ scale });
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.floor(vp.width); canvas.height = Math.floor(vp.height);
+    const ctx = canvas.getContext('2d');
+    await page.render({ canvasContext: ctx, viewport: vp }).promise;
+    const blob = await new Promise(res => canvas.toBlob(b => res(b), fmt === 'png' ? 'image/png' : 'image/jpeg', 0.92));
+    if (blob) h.add(baseOf(it.name) + '_p' + i + '.' + (fmt === 'png' ? 'png' : 'jpg'), blob);
+  }
+}
+async function pdfImgToPdf(items, h){
+  const P = window.PDFLib;
+  const doc = await P.PDFDocument.create();
+  for (let i = 0; i < items.length; i++){
+    const it = items[i];
+    setProg(h, it, Math.round((i / items.length) * 95));
+    const ext = it.ext === 'png' || it.ext === 'jpg' || it.ext === 'jpeg' ? it.ext : (it.magic && it.magic.ext) || '';
+    let bytes = new Uint8Array(await it.file.arrayBuffer());
+    let img;
+    if (ext === 'png') img = await doc.embedPng(bytes);
+    else if (ext === 'jpg' || ext === 'jpeg') img = await doc.embedJpg(bytes);
+    else {
+      const blob = await imgToBlob(it.file, 'png', 0.9);
+      img = await doc.embedPng(new Uint8Array(await blob.arrayBuffer()));
+    }
+    const page = doc.addPage([img.width, img.height]);
+    page.drawImage(img, { x: 0, y: 0, width: img.width, height: img.height });
+  }
+  const bytes = await doc.save();
+  h.add('images.pdf', new Blob([bytes], { type: 'application/pdf' }));
+}
+async function pdfToText(it, h){
+  if (!window.pdfjsLib) throw new Error('PDF 渲染引擎未加载');
+  window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER_SRC;
+  const doc = await window.pdfjsLib.getDocument({ data: await it.file.arrayBuffer() }).promise;
+  let text = '';
+  for (let i = 1; i <= doc.numPages; i++){
+    setProg(h, it, Math.round(((i - 1) / doc.numPages) * 95));
+    const page = await doc.getPage(i);
+    const content = await page.getTextContent();
+    text += '===== 第 ' + i + ' 页 =====\n' + content.items.map(t => t.str || '').join('') + '\n\n';
+  }
+  return [{ blob: new Blob(['\ufeff' + text], { type: 'text/plain;charset=utf-8' }), name: baseOf(it.name) + '.txt' }];
+}
+
+/* ---------- 压缩包 ---------- */
+CONVERTERS.archive = {
+  async run(items, h){
+    const action = $('#z-action').value;
+    const F = window.fflate;
+    if (!F) throw new Error('压缩引擎未加载');
+    try {
+      if (action === 'zip'){
+        for (const it of items) h.mark(it, 'working');
+        const files = {};
+        for (let i = 0; i < items.length; i++){
+          setProg(h, items[i], Math.round((i / items.length) * 90));
+          files[items[i].name] = new Uint8Array(await items[i].file.arrayBuffer());
+        }
+        const zipped = F.zipSync(files, { level: 6 });
+        h.add('archive.zip', new Blob([zipped], { type: 'application/zip' }));
+        items.forEach(i => h.mark(i, 'done'));
+        return;
+      }
+      if (action === 'gzip'){
+        for (const it of items){
+          h.mark(it, 'working');
+          const data = new Uint8Array(await it.file.arrayBuffer());
+          const gz = F.gzipSync(data, { level: 6 });
+          h.add(it.name + '.gz', new Blob([gz], { type: 'application/gzip' }));
+          h.mark(it, 'done');
+        }
+        return;
+      }
+      if (action === 'gunzip'){
+        for (const it of items){
+          h.mark(it, 'working');
+          const data = new Uint8Array(await it.file.arrayBuffer());
+          const out = F.gunzipSync(data);
+          h.add(it.name.replace(/\.gz$/i, '') || 'out.bin', new Blob([out], { type: 'application/octet-stream' }));
+          h.mark(it, 'done');
+        }
+        return;
+      }
+      /* extract */
+      for (const it of items){
+        h.mark(it, 'working');
+        const data = new Uint8Array(await it.file.arrayBuffer());
+        const ext = it.ext;
+        let entries = [];
+        if (ext === 'zip'){ const un = F.unzipSync(data); entries = Object.keys(un).map(n => ({ name: n, data: un[n] })); }
+        else if (ext === 'tar') entries = F.untarSync(data).map(e => ({ name: e[0], data: e[1] }));
+        else if (ext === 'gz') entries = [{ name: it.name.replace(/\.gz$/i, '') || 'out.bin', data: F.gunzipSync(data) }];
+        else if (ext === 'tgz') entries = F.untarSync(F.gunzipSync(data)).map(e => ({ name: e[0], data: e[1] }));
+        else throw new Error('不支持的压缩格式：' + (ext || '未知'));
+        let count = 0;
+        for (const e of entries){
+          if (/\/$/.test(e.name)) continue;
+          count++;
+          h.add((e.name.split('/').pop() || e.name), new Blob([e.data], { type: 'application/octet-stream' }));
+        }
+        if (!count) toast('压缩包为空', it.name + ' 内没有可导出的文件。', 'info');
+        h.mark(it, 'done');
+      }
+    } catch(e){
+      items.forEach(i => h.mark(i, 'error', (e && e.message || String(e)).split('\n')[0].slice(0, 150)));
+    }
+  }
+};
+
+/* ---------- 格式侦探（识别展示，无转换） ---------- */
+function renderDetectCard(item){
+  const wrap = $('[data-detect-cards]');
+  const card = document.createElement('div');
+  card.className = 'detect-card';
+  const magic = item.magic;
+  const prop = item.propInfo;
+  let badge = { text: '未知', cls: 'detect-badge', bg: '#8A94A6' };
+  let name = '无法识别的文件';
+  let actions = '';
+  if (prop){
+    badge = { text: prop.app, cls: 'detect-badge', bg: prop.lock ? '#E06C5B' : '#C07BE0' };
+    name = prop.name;
+  } else if (magic){
+    badge = { text: (magic.cat || '文件').toUpperCase(), cls: 'detect-badge', bg: CAT_COLORS[magic.cat] || '#4A9BE8' };
+    name = magic.name + (magic.brand ? '（' + magic.brand + '）' : '');
+  }
+  const kv = [];
+  kv.push(['文件', esc(item.name)]);
+  kv.push(['大小', fmtSize(item.size)]);
+  kv.push(['扩展名', esc('.' + (item.ext || '无'))]);
+  if (magic) kv.push(['真实格式', esc(magic.ext ? '.' + magic.ext : magic.name)]);
+  if (item.mismatch) kv.push(['伪装提示', '扩展名与真实格式不符，实际为 .' + item.mismatch.real]);
+  if (prop) kv.push(['版权状态', prop.lock ? 'DRM 加密保护' : '专有/受限格式']);
+  let note = '';
+  let noteCls = 'detect-note';
+  if (prop){
+    note = prop.note;
+    noteCls += prop.lock ? ' lock' : '';
+  } else if (item.mismatch && magic && ['mp4','webm','mkv','mov','mp3','wav','ogg','flac','png','jpg','jpeg','webp','gif'].includes(magic.ext)){
+    note = '这个文件只是被改了扩展名，实际是标准 ' + magic.name + '。可直接点击「去对应模块转换」，或用下方按钮下载为正确扩展名的副本。';
+    noteCls += ' ok';
+  } else if (magic && ['mp4','webm','mkv','mov','mp3','wav','ogg','flac','png','jpg','jpeg','webp','gif','pdf','xlsx','docx','zip','csv'].includes(magic.ext)){
+    note = '这是一个标准 ' + magic.name + '，可直接在对应模块中转换。';
+    noteCls += ' ok';
+  }
+  const routeMap = { mp4:'video', webm:'video', mkv:'video', mov:'video', mp3:'audio', wav:'audio', ogg:'audio', flac:'audio', aac:'audio', m4a:'audio', png:'image', jpg:'image', jpeg:'image', webp:'image', gif:'image', pdf:'pdf', xlsx:'sheet', docx:'doc', zip:'archive' };
+  const goRoute = magic && routeMap[magic.ext];
+  if (goRoute){
+    const label = { video:'视频转换', audio:'音频转换', image:'图片转换', pdf:'PDF 工具', sheet:'表格转换', doc:'文档转换', archive:'压缩包工具' }[goRoute];
+    actions += `<button class="btn btn-ghost" style="padding:7px 15px;font-size:12.5px" data-go="${goRoute}">去${label}处理</button>`;
+  }
+  if (item.mismatch && magic && magic.ext && !prop){
+    actions += `<button class="btn btn-primary" style="padding:7px 15px;font-size:12.5px" data-rename="${esc(magic.ext)}">下载为 .${esc(magic.ext)} 副本</button>`;
+  }
+  actions += `<button class="btn btn-ghost" style="padding:7px 15px;font-size:12.5px" data-rm>移除</button>`;
+  card.innerHTML = `
+    <div class="detect-top">
+      <span class="detect-badge" style="background:${badge.bg};color:#0c1017">${badge.text}</span>
+      <span class="detect-name">${esc(name)}</span>
+      ${prop ? `<span class="detect-app">${esc(prop.app)}</span>` : ''}
+    </div>
+    <div class="detect-grid">${kv.map(([k, v]) => `<div class="kv"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('')}</div>
+    ${note ? `<div class="${noteCls}">${esc(note)}</div>` : ''}
+    <div class="detect-actions">${actions}</div>`;
+  card.querySelector('[data-rm]').onclick = () => { card.remove(); state.files.detect = state.files.detect.filter(i => i.id !== item.id); };
+  const go = card.querySelector('[data-go]');
+  if (go) go.onclick = () => setRoute(go.dataset.go);
+  const ren = card.querySelector('[data-rename]');
+  if (ren) ren.onclick = () => saveBlob(item.file, baseOf(item.name) + '.' + ren.dataset.rename);
+  wrap.prepend(card);
+}
+
+/* ---------- 转换调度 ---------- */
+async function runConvert(route){
+  const items = (state.files[route] || []).filter(f => f.status !== 'working');
+  if (!items.length){ toast('没有文件', '请先添加要处理的文件。', 'info'); return; }
+  if (state.busy){ toast('正在处理', '请等待当前任务完成后再开始。', 'info'); return; }
+  state.busy = true;
+  const C = CONVERTERS[route];
+  if (!C){ state.busy = false; return; }
+  try {
+    await C.run(items, {
+      prog: (it, p) => renderFileCard(route, it),
+      mark: (it, status, err) => { it.status = status; if (err) it.error = err; renderFileCard(route, it); },
+      add: (name, blob) => addResult(route, name, blob.size, blob),
+    });
+  } catch(e){
+    console.error(e);
+    toast('处理出错', (e && e.message || String(e)).slice(0, 120), 'err');
+  } finally {
+    state.busy = false;
+    const p = $('#logpanel'); if (p) p.classList.remove('show');
+  }
+}
+
+/* ---------- 初始化 ---------- */
+document.addEventListener('DOMContentLoaded', initCore);
+</script>
+
+</body>
+</html>
